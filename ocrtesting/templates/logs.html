@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document Logs</title>
+  {% load static %}
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar Included -->
+  {% include "includes/sidebar.html" %}
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-4 md:p-6">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+
+      <!-- Header with Title and Search -->
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-gray-200">
+        <h1 class="text-2xl font-bold text-gray-800">Document Activity Logs</h1>
+        <form method="get" class="mt-4 sm:mt-0 w-full sm:w-auto">
+          <div class="relative">
+            <input 
+              type="text" 
+              name="search" 
+              value="{{ search_query }}" 
+              placeholder="Search logs..." 
+              class="w-full sm:w-64 pl-4 pr-10 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+            <button type="submit" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-blue-600">
+              <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document Details</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for log in logs %}
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ log.timestamp|date:"M. d, Y, g:i A" }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ log.user.username|default:"System" }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ log.action }}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                  <div class="font-medium text-gray-900">{{ log.document_subject }}</div>
+                  <div class="text-xs text-gray-500">{{ log.document_type }} (ID: {{ log.document_id }})</div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center py-10 px-6 text-gray-500">
+                  {% if search_query %}
+                    No log entries found matching your search.
+                  {% else %}
+                    No log entries found.
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div class="py-4 flex items-center justify-center">
+        {% include 'activities/partials/pagination.html' with page_obj=page_obj page_range=page_range querystring=querystring %}
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+</div>
+</body>
+</html>

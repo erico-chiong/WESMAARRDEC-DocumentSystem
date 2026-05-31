@@ -1,0 +1,154 @@
+[
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 1,
+    "fields": {
+      "name": "Martin A. Wee",
+      "email": "martin.a.wee@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 2,
+    "fields": {
+      "name": "Leonilo B. Abella",
+      "email": "leonilo.b.abela@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 3,
+    "fields": {
+      "name": "Dulce-Amor P. Matondo",
+      "email": "dulce-amor.p.matondo@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 4,
+    "fields": {
+      "name": "Soledad P. Salazar",
+      "email": "soledad.p.salazar@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 5,
+    "fields": {
+      "name": "Kimberly Joy R. Kilat",
+      "email": "kimberly.joy.r.kilat@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 6,
+    "fields": {
+      "name": "Lucy F. Sadiwa",
+      "email": "lucy.f.sadiwa@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 7,
+    "fields": {
+      "name": "Angelie G. Magallanes",
+      "email": "angelie.g.magallanes@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 8,
+    "fields": {
+      "name": "Precious J. Diñola",
+      "email": "precious.j.dinola@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 9,
+    "fields": {
+      "name": "Ermon Alegata",
+      "email": "ermon.alegata@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 10,
+    "fields": {
+      "name": "Cleofe R. Vasquez",
+      "email": "cleofe.r.vasquez@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 11,
+    "fields": {
+      "name": "Mark Anthony D. Tubat",
+      "email": "mark.anthony.d.tubat@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 12,
+    "fields": {
+      "name": "Ceed Jezreel Lorenzo",
+      "email": "mark.anthony.d.tubat@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 13,
+    "fields": {
+      "name": "Ferdinand S. Guardo",
+      "email": "mark.anthony.d.tubat@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 14,
+    "fields": {
+      "name": "Ahmadnur Jul",
+      "email": "julahmadnur3@gmail.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 15,
+    "fields": {
+      "name": "Rey Flores",
+      "email": "testowner@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 16,
+    "fields": {
+      "name": "Gadgets",
+      "email": "admin@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 17,
+    "fields": {
+      "name": "Sample Recipient",
+      "email": "ramses@gmail.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 18,
+    "fields": {
+      "name": "Nurainie Abdula",
+      "email": "nurainiehamidabdulla@gmail.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 19,
+    "fields": {
+      "name": "Mark",
+      "email": "tubat.mark09@gmail.com"
+    }
+  }
+]

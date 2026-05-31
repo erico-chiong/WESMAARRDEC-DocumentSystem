@@ -1,0 +1,33 @@
+[
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 1,
+    "fields": {
+      "name": "Test Recipient",
+      "email": "testrecipient@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.recipient",
+    "pk": 2,
+    "fields": {
+      "name": "Another Recipient",
+      "email": "another@example.com"
+    }
+  },
+  {
+    "model": "ocrtesting.document",
+    "pk": 1,
+    "fields": {
+      "document_type": "memo",
+      "category": "incoming",
+      "doc_id": "000001",
+      "subject": "Test Document Subject",
+      "date": "2025-06-23",
+      "approved_date": null,
+      "image": "documents/sample.jpg",
+      "cancelled": false,
+      "recipients": [1, 2]
+    }
+  }
+]

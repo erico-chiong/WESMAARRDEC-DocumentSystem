@@ -1,0 +1,341 @@
+{% load static %}
+<!-- templates/includes/sidebar.html -->
+
+<!-- Desktop sidebar state (runs early to avoid layout flicker) -->
+<script>
+  (function () {
+    try {
+      const collapsed = localStorage.getItem('ds_sidebar_collapsed') === '1';
+      if (collapsed) {
+        document.documentElement.classList.add('ds-sidebar-collapsed');
+      }
+    } catch (e) {
+      // ignore
+    }
+  })();
+</script>
+
+<style>
+  /* Desktop collapse behavior */
+  @media (min-width: 768px) {
+    :root {
+      /* ~10% of 18rem (w-72) */
+      --ds-sidebar-peek: 1.8rem;
+    }
+
+    #sidebar-shell {
+      transition: width 300ms ease;
+      overflow: visible;
+    }
+    #sidebar {
+      transition: transform 300ms ease;
+    }
+
+    html.ds-sidebar-collapsed #sidebar-shell {
+      width: var(--ds-sidebar-peek) !important;
+    }
+
+    html.ds-sidebar-collapsed #sidebar {
+      /* Keep a small portion visible when collapsed */
+      transform: translateX(calc(-100% + var(--ds-sidebar-peek))) !important;
+    }
+  }
+</style>
+
+<div id="sidebar-shell" class="relative md:w-72 flex-shrink-0">
+  <aside
+    class="z-40 fixed md:sticky top-0 flex flex-col bg-green-800 py-8 w-72 h-screen text-white transition-transform -translate-x-full md:translate-x-0 duration-300 transform"
+    id="sidebar"
+  >
+    <!-- Desktop Collapse Tab (outside pull handle) -->
+    <button
+      id="sidebarDesktopToggle"
+      type="button"
+      class="hidden md:flex absolute top-1/2 -right-8 transform -translate-y-1/2 items-center justify-center w-8 h-16 bg-green-800 hover:bg-green-700 shadow-lg border border-white border-opacity-30 rounded-r-full focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-60"
+      style="border-top-left-radius: 0; border-bottom-left-radius: 0;"
+      aria-label="Collapse sidebar"
+      aria-controls="sidebar"
+      aria-expanded="true"
+    >
+      <svg class="w-5 h-5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+
+    <div class="flex flex-col h-full px-4">
+
+    <!-- Logo -->
+    <div class="flex flex-col items-center mb-10 flex-shrink-0">
+      <img src="{% static '/images/logo.png' %}" alt="Logo" class="size-24" />
+      <span class="font-semibold text-lg md:text-xl">Document Archiving</span>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <nav class="flex-1 overflow-y-auto">
+      <ul class="space-y-4">
+        <!-- Dashboard -->
+        <li>
+          <a href="{% url 'ocrtesting:dashboard' %}"
+             class="block flex justify-between items-center px-4 py-2 rounded w-full text-left transition
+                    {% if request.resolver_match.url_name == 'dashboard' %}
+                      bg-white font-semibold text-green-800 hover:bg-green-600 hover:text-white
+                    {% else %}
+                      hover:bg-green-600
+                    {% endif %}">
+            Dashboard
+          </a>
+        </li>
+
+        <!-- Add Documents Dropdown -->
+        <li>
+          <button id="add-docs-button" class="block flex justify-between items-center hover:bg-green-600 px-4 py-2 rounded w-full text-left transition">
+            <span class="flex items-center space-x-2"><span>Add Documents</span></span>
+            <svg id="add-docs-arrow" class="ml-2 w-4 h-4 transition-transform transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- Dropdown Content -->
+          <ul id="dropdownMenu" class="hidden space-y-2 mt-2 ml-4">
+            <!-- Memorandum -->
+            <li>
+              <button type="button" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded w-full text-sm text-left transition memorandum-trigger">
+                <span>📄</span><span>Memorandum</span>
+                <svg class="ml-auto w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <div class="hidden mt-2 ml-4 space-y-1 text-gray-200 text-sm memorandum-panel">
+                <a href="{% url 'ocrtesting:create_memorandum' 'incoming'%}" class="block hover:bg-green-700 rounded px-4 py-2">⬇️ Incoming</a>
+                <a href="{% url 'ocrtesting:create_memorandum' 'outgoing'%}" class="block hover:bg-green-700 rounded px-4 py-2">⬆️ Outgoing</a>
+              </div>
+            </li>
+            <!-- Travel Order -->
+            <li>
+              <a href="{% url 'ocrtesting:create_travel_order' %}" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded text-sm transition">
+                <span>✈️</span><span>Travel Order</span>
+              </a>
+            </li>
+            <!-- Special Order -->
+            <li>
+              <a href="{% url 'ocrtesting:create_special_order' %}" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded text-sm transition">
+                <span>📌</span><span>Special Order</span>
+              </a>
+            </li>
+            <!-- Communication Letter -->
+            <li>
+              <button type="button" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded w-full text-sm text-left transition comm-letter-trigger">
+                <span>💬</span><span>Communication Letter</span>
+                <svg class="ml-auto w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <div class="hidden mt-2 ml-4 space-y-1 text-gray-200 text-sm comm-letter-panel">
+                <a href="{% url 'ocrtesting:create_communication_letter' 'incoming'%}" class="block hover:bg-green-700 rounded px-4 py-2">⬇️ Incoming</a>
+                <a href="{% url 'ocrtesting:create_communication_letter' 'outgoing'%}" class="block hover:bg-green-700 rounded px-4 py-2">⬆️ Outgoing</a>
+              </div>
+            </li>
+            <!-- MOAU -->
+            <li>
+              <a href="{% url 'ocrtesting:create_moau' %}" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded text-sm transition">
+                <span>📎</span><span>MOAU</span>
+              </a>
+            </li>
+            <!-- Other Document -->
+            <li>
+              <a href="{% url 'ocrtesting:create_other_document' %}" class="flex items-center space-x-2 hover:bg-green-600 px-4 py-1 rounded text-sm transition">
+                <span>📂</span><span>Other Document</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <!-- View Documents -->
+        <li>
+          <a href="{% url 'ocrtesting:document_list' %}" class="block flex justify-between items-center px-4 py-2 rounded w-full text-left transition
+                {% if request.resolver_match.view_name == 'ocrtesting:document_list' %}
+                  bg-white font-semibold text-green-800
+                {% else %}
+                  hover:bg-green-600
+                {% endif %}">
+              View Documents</a>
+        </li>
+
+        <!-- Document Logs -->
+         <li>
+          <a href="{% url 'ocrtesting:document_logs' %}" class="block flex justify-between items-center px-4 py-2 rounded w-full text-left transition
+                {% if request.resolver_match.view_name == 'ocrtesting:document_logs' %}
+                  bg-white font-semibold text-green-800
+                {% else %}
+                  hover:bg-green-600
+                {% endif %}">
+              Documents Logs</a>
+        </li>
+        <li>
+          <a href="{% url 'ocrtesting:manage_recipients' %}" class="block flex justify-between items-center px-4 py-2 rounded w-full text-left transition
+                {% if request.resolver_match.view_name == 'ocrtesting:manage_recipients' %}
+                  bg-white font-semibold text-green-800
+                {% else %}
+                  hover:bg-green-600
+                {% endif %}">
+              View Recipient </a>
+        </li>
+
+        <!-- =================================================================== -->
+        <!-- --- THIS IS THE NEW CONDITIONAL BLOCK --- -->
+        <!-- =================================================================== -->
+        {% if request.user.is_authenticated and request.user.admin %}
+         <li>
+          <a href="{% url 'accounts:user_list' %}" class="block flex justify-between items-center px-4 py-2 rounded w-full text-left transition
+                {% if 'accounts:' in request.resolver_match.view_name %}
+                  bg-white font-semibold text-green-800
+                {% else %}
+                  hover:bg-green-600
+                {% endif %}">
+              Manage Users </a>
+        </li>
+        {% endif %}
+
+        <!-- Logout -->
+        <li>
+          <a href="{% url 'accounts:logout' %}" id="logout-link" class="block flex justify-between items-center hover:bg-green-600 px-4 py-2 rounded w-full text-left transition">Logout</a>
+        </li>
+      </ul>
+    </nav>
+    </div>
+  </aside>
+</div>
+
+<!-- Mobile Sidebar Toggle -->
+<button id="sidebarToggle" class="md:hidden top-4 left-4 z-50 fixed bg-green-700 shadow-lg p-2 rounded text-white">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Your existing, working JavaScript -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Logout Confirmation
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Are you sure?',
+          text: "You will be logged out of your session.",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#166534', // green-800
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, logout!'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = logoutLink.href;
+          }
+        })
+      });
+    }
+
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    if (sidebarToggle && sidebar) {
+      sidebarToggle.addEventListener('click', function () {
+        sidebar.classList.toggle('-translate-x-full');
+      });
+    }
+
+    // Desktop collapse / expand
+    const desktopToggleBtn = document.getElementById('sidebarDesktopToggle');
+    const desktopToggleIcon = desktopToggleBtn ? desktopToggleBtn.querySelector('svg') : null;
+
+    function setDesktopCollapsed(collapsed) {
+      document.documentElement.classList.toggle('ds-sidebar-collapsed', collapsed);
+      try {
+        if (collapsed) {
+          localStorage.setItem('ds_sidebar_collapsed', '1');
+        } else {
+          localStorage.removeItem('ds_sidebar_collapsed');
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      if (desktopToggleBtn) {
+        desktopToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+        desktopToggleBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      }
+
+      if (desktopToggleIcon) {
+        desktopToggleIcon.classList.toggle('rotate-180', collapsed);
+      }
+
+      // If collapsing, also close any open dropdown menus to avoid weird states
+      if (collapsed) {
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const addDocsArrow = document.getElementById('add-docs-arrow');
+        if (dropdownMenu) dropdownMenu.classList.add('hidden');
+        if (addDocsArrow) addDocsArrow.classList.remove('rotate-180');
+        document.querySelectorAll('.memorandum-panel, .comm-letter-panel').forEach(p => p.classList.add('hidden'));
+        document.querySelectorAll('.memorandum-trigger svg, .comm-letter-trigger svg').forEach(a => a.classList.remove('rotate-180'));
+      }
+    }
+
+    if (desktopToggleBtn) {
+      desktopToggleBtn.addEventListener('click', function () {
+        const isCollapsed = document.documentElement.classList.contains('ds-sidebar-collapsed');
+        setDesktopCollapsed(!isCollapsed);
+      });
+    }
+
+    // Sync ARIA on load
+    const initialCollapsed = document.documentElement.classList.contains('ds-sidebar-collapsed');
+    if (desktopToggleBtn) {
+      desktopToggleBtn.setAttribute('aria-expanded', String(!initialCollapsed));
+      desktopToggleBtn.setAttribute('aria-label', initialCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+    }
+    if (desktopToggleIcon) {
+      desktopToggleIcon.classList.toggle('rotate-180', initialCollapsed);
+    }
+
+    const addDocsBtn = document.getElementById('add-docs-button');
+    const addDocsArrow = document.getElementById('add-docs-arrow');
+    const dropdownMenu = document.getElementById('dropdownMenu');
+    if (addDocsBtn && dropdownMenu) {
+      addDocsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const isHidden = dropdownMenu.classList.toggle('hidden');
+        addDocsArrow.classList.toggle('rotate-180', !isHidden);
+      });
+    }
+
+    function setupNestedDropdown(triggerClass, panelClass) {
+      const triggers = document.querySelectorAll('.' + triggerClass);
+      
+      triggers.forEach((trigger) => {
+        const panel = trigger.nextElementSibling;
+        const arrow = trigger.querySelector('svg');
+
+        trigger.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const isHidden = panel.classList.toggle('hidden');
+          arrow.classList.toggle('rotate-180', !isHidden);
+        });
+      });
+    }
+
+    setupNestedDropdown('memorandum-trigger', 'memorandum-panel');
+    setupNestedDropdown('comm-letter-trigger', 'comm-letter-panel');
+
+    document.addEventListener('click', function(e) {
+      if (addDocsBtn && !addDocsBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+        dropdownMenu.classList.add('hidden');
+        if (addDocsArrow) {
+          addDocsArrow.classList.remove('rotate-180');
+        }
+      }
+    });
+  });
+</script>

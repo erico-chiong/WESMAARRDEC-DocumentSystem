@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up | WESMAARRDEC</title>
+
+    <!-- Link to the shared authentication stylesheet -->
+    <link rel="stylesheet" href="{% static 'accounts/css/login.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <main class="login-container">
+
+        <!-- Left Side: Branding and Welcome Message -->
+        <section class="login-branding">
+            <img src="{% static '/images/logo.png' %}" alt="WESMAARRDEC Logo" class="logo">
+            <h1></h1>
+            <p></p>
+        </section>
+
+        <!-- Right Side: The Signup Form -->
+        <section class="login-form-wrapper">
+            <h2>Create Account</h2>
+
+            <form method="post" action="{% url 'account_signup' %}">
+                {% csrf_token %}
+
+                <!-- Display Non-Field Errors -->
+                {% if form.non_field_errors %}
+                    <ul class="non-field-errors">
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                <!-- Iterate over form fields for consistent styling -->
+                {% for field in form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <ul class="field-error">
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <button type="submit" class="btn-login">Sign Up</button>
+
+                <div class="signup-link">
+                    Already have an account? <a href="{% url 'account_login' %}">Sign In</a>
+                </div>
+            </form>
+        </section>
+
+    </main>
+
+    <!-- Adding custom attributes to form fields rendered by Django -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('form input, form select, form textarea').forEach(field => {
+                if (field.type !== 'submit' && field.type !== 'hidden' && field.type !== 'checkbox') {
+                    field.classList.add('form-control');
+                }
+            });
+
+            {% if messages %}
+                {% for message in messages %}
+                    Swal.fire({
+                        icon: "{{ message.tags }}" === "error" ? "error" : "{{ message.tags }}" === "success" ? "success" : "info",
+                        title: "{{ message.tags|capfirst }}",
+                        text: "{{ message }}",
+                        timer: 4000,
+                        showConfirmButton: false
+                    });
+                {% endfor %}
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

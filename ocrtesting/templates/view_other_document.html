@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>View Other Document</title>
+  {% load static %}
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gray-200">
+
+  <!-- SENDING EMAIL LOADING OVERLAY -->
+  <div id="sending-overlay" class="hidden z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+    <div class="flex flex-col items-center">
+      <div class="border-4 border-gray-200 border-t-green-500 rounded-full w-12 h-12 animate-spin"></div>
+      <p class="mt-2 text-white text-lg">Sending, please wait…</p>
+    </div>
+  </div>
+
+  <div class="flex min-h-screen">
+    {% include "includes/sidebar.html" %}
+
+    <main class="bg-gray-50 md:shadow-lg mx-0 md:mx-5 md:my-5 p-2 sm:p-4 md:p-5 md:rounded-xl flex-1 transition-all duration-300">
+
+      {% if not document.is_archived %}
+        <!-- =================================================================== -->
+        <!-- --- THIS IS YOUR ORIGINAL, UNCHANGED LAYOUT FOR LIVE DOCUMENTS --- -->
+        <!-- =================================================================== -->
+        <div class="flex md:flex-row flex-col md:space-x-4 h-full">
+          <!-- LEFT PANEL: Slider & Dynamic Actions -->
+          <div class="flex flex-col bg-white shadow p-2 md:p-4 rounded-lg w-full md:w-3/5">
+            <div class="relative flex-1 mb-4">
+              <div id="image-slider" class="relative w-full h-full overflow-hidden">
+                <div id="slides-wrapper" class="w-full h-full">
+                  {% for f in files %}
+                    <div class="hidden flex flex-col justify-center items-center w-full h-full slide" data-content-type="{{ f.content_type }}" data-file-url="{{ f.file.url }}" data-file-name="{{ f.file.name }}">
+                      {% if f.content_type|slice:":5" == "image" %}
+                        <img src="{{ f.file.url }}" class="max-w-full max-h-full object-contain" alt="Document page image"/>
+                      {% elif f.content_type == "application/pdf" %}
+                        <div class="text-center">
+                            <p class="mb-4 text-gray-800 text-lg">This file is a PDF.</p>
+                            <p class="text-gray-500 text-sm">Use the download button below.</p>
+                        </div>
+                      {% else %}
+                        <p class="text-gray-700 text-sm">Unsupported file type: {{ f.file.name }}</p>
+                      {% endif %}
+                    </div>
+                  {% empty %}
+                    <div class="flex justify-center items-center h-full">
+                        <p class="text-gray-500">No files have been uploaded for this document.</p>
+                    </div>
+                  {% endfor %}
+                </div>
+                <button id="prevBtn" type="button" class="top-1/2 left-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">‹</button>
+                <button id="nextBtn" type="button" class="top-1/2 right-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">›</button>
+              </div>
+            </div>
+            <div class="flex justify-center mt-4">
+              {% if files %}
+                <a id="saveAllAsPdfBtn" href="{% url 'ocrtesting:download_document_pdf' doc_type=document_type pk=document.pk %}" class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 shadow-md px-4 py-2 rounded-lg font-medium text-white text-sm transition duration-150">
+                  <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                  Download Combined PDF
+                </a>
+                <a id="downloadCurrentPdfBtn" href="#" download class="hidden inline-flex items-center bg-blue-600 hover:bg-blue-700 shadow-md px-4 py-2 rounded-lg font-medium text-white text-sm transition duration-150">
+                  <svg class="mr-2 w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/></svg>
+                  Download This PDF
+                </a>
+              {% endif %}
+            </div>
+          </div>
+          <!-- RIGHT PANEL: Other Document Details & Actions -->
+          <div class="flex flex-col bg-white shadow mt-2 md:mt-0 p-4 rounded-lg w-full md:w-2/5">
+            <h2 class="mb-4 font-bold text-xl text-center">Other Document Details</h2>
+            <div class="flex-1 space-y-4 overflow-auto">
+              <div><label class="block font-medium text-gray-700 text-sm">Document ID</label><p class="mt-1 text-gray-900">{{ document.document_id }}</p></div>
+              <div><label class="block font-medium text-gray-700 text-sm">Document Type</label><p class="mt-1 text-gray-900">{{ document.doc_type|title }}</p></div>
+              <div><label class="block font-medium text-gray-700 text-sm">Subject</label><p class="mt-1 text-gray-900">{{ document.subject|default:"N/A" }}</p></div>
+              <div><label class="block font-medium text-gray-700 text-sm">Date</label><p class="mt-1 text-gray-900">{{ document.date }}</p></div>
+              <div>
+                <label class="block font-medium text-gray-700 text-sm">Recipients</label>
+                <div class="flex flex-wrap gap-2 mt-1">
+                  {% for r in document.recipients.all %}<span class="bg-blue-100 px-2 py-1 rounded text-blue-800">{{ r.name }}</span>{% empty %}<p class="text-gray-500 text-sm">None</p>{% endfor %}
+                </div>
+              </div>
+              
+              <!-- =================================================================== -->
+              <!-- --- NEW FIELDS ADDED HERE --- -->
+              <!-- =================================================================== -->
+              {% if document.received_by %}
+                <div>
+                  <label class="block font-medium text-gray-700 text-sm">Received By</label>
+                  <p class="mt-1 text-gray-900">{{ document.received_by }}</p>
+                </div>
+              {% endif %}
+
+              {% if document.remarks %}
+                <div>
+                  <label class="block font-medium text-gray-700 text-sm">Remarks</label>
+                  <p class="mt-1 text-gray-900 whitespace-pre-wrap">{{ document.remarks }}</p>
+                </div>
+              {% endif %}
+
+            </div>
+            <div class="flex space-x-2 mt-6">
+              <a href="{% url 'ocrtesting:edit_other_document' document.pk %}" class="flex-1 bg-yellow-500 hover:bg-yellow-600 py-2 rounded text-white text-center">Edit</a>
+              <a href="{% url 'ocrtesting:document_list' %}" class="flex-1 bg-gray-300 hover:bg-gray-400 py-2 rounded text-gray-800 text-center">Back</a>
+              <button id="sendEmailBtn" type="button" data-email-url="{% url 'ocrtesting:send_document_email' doc_type=document_type pk=document.pk %}" class="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 py-2 rounded w-full text-white">Send Email</button>
+            </div>
+          </div>
+        </div>
+      
+      {% else %}
+        <!-- =================================================================== -->
+        <!-- --- VIEW FOR AN ARCHIVED DOCUMENT --- -->
+        <!-- =================================================================== -->
+        <div class="flex justify-center items-center h-full">
+          <div class="text-center bg-white p-10 rounded-lg shadow-xl border w-full max-w-2xl">
+              <svg class="mx-auto h-16 w-16 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+              <h2 class="mt-4 text-2xl font-bold text-gray-800">Archived Document</h2>
+              <p class="mt-2 text-gray-600">The files for this document are stored in the Google Drive archive.</p>
+              <div class="text-left my-6 p-4 bg-gray-50 rounded-md border space-y-2">
+                  <p><strong>Document ID:</strong> {{ document.document_id }}</p>
+                  <p><strong>Subject:</strong> {{ document.subject|default:"N/A" }}</p>
+                  <p><strong>Date:</strong> {{ document.date }}</p>
+                  <p><strong>Type:</strong> {{ document.doc_type|title }}</p>
+              </div>
+              <div class="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 mt-6">
+                <a href="{% url 'ocrtesting:view_archived_file' doc_type=document_type|slugify pk=document.pk %}" target="_blank" class="flex-1 bg-indigo-600 hover:bg-indigo-700 py-2 px-4 rounded-md text-white text-center font-semibold">View from Archive</a>
+                <form action="{% url 'ocrtesting:restore_documents' %}" method="post" class="flex-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="doc_1" value="other_document_{{ document.pk }}">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 py-2 px-4 rounded-md text-white text-center font-semibold">Restore Document</button>
+                </form>
+              </div>
+              <div class="mt-6"><a href="{% url 'ocrtesting:document_list' %}" class="text-sm text-gray-500 hover:underline">← Back to Document List</a></div>
+          </div>
+        </div>
+      {% endif %}
+    </main>
+  </div>
+  <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.getElementById('image-slider')) {
+        const slidesWrapper = document.getElementById('slides-wrapper');
+        const slides = Array.from(slidesWrapper.children);
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const saveAllBtn = document.getElementById('saveAllAsPdfBtn');
+        const downloadCurrentBtn = document.getElementById('downloadCurrentPdfBtn');
+        let currentIndex = 0;
+        function showSlide(i) {
+          if (slides[i]) {
+            slides.forEach((el, idx) => el.classList.toggle('hidden', idx !== i));
+            if (saveAllBtn && downloadCurrentBtn) {
+              // Always use the combined-PDF download endpoint.
+              saveAllBtn.classList.remove('hidden');
+              downloadCurrentBtn.classList.add('hidden');
+            }
+          }
+        }
+        if (slides.length > 0) {
+          showSlide(0);
+          if (slides.length <= 1) {
+            if(prevBtn) prevBtn.style.display = 'none';
+            if(nextBtn) nextBtn.style.display = 'none';
+          }
+          prevBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+            showSlide(currentIndex);
+          });
+          nextBtn.addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % slides.length;
+            showSlide(currentIndex);
+          });
+        } else {
+          if (prevBtn) prevBtn.style.display = 'none';
+          if (nextBtn) nextBtn.style.display = 'none';
+        }
+        const sendBtn = document.getElementById('sendEmailBtn');
+        if (sendBtn) {
+          sendBtn.addEventListener('click', () => {
+            Swal.fire({
+              title: 'Are you sure?',
+              text: 'Do you want to send this document to all recipients?',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#3085d6',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Yes, send it!'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                const sendingOverlay = document.getElementById('sending-overlay');
+                sendingOverlay.classList.remove('hidden');
+                sendBtn.disabled = true;
+                fetch(sendBtn.dataset.emailUrl, {
+                  method: 'POST',
+                  headers: { 'X-CSRFToken': getCookie('csrftoken') }
+                })
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status === 'ok') {
+                    Swal.fire('Sent!', data.message || 'Email sent successfully.', 'success');
+                  } else {
+                    Swal.fire('Error!', data.error || 'Failed to send email.', 'error');
+                  }
+                })
+                .catch((err) => {
+                  console.error('Email sending error:', err);
+                  Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                })
+                .finally(() => {
+                  sendingOverlay.classList.add('hidden');
+                  sendBtn.disabled = false;
+                });
+              }
+            });
+          });
+        }
+      }
+
+      {% if messages %}
+          {% for message in messages %}
+              Swal.fire({
+                  icon: '{{ message.tags|default:"info" }}',
+                  title: '{{ message.tags|title|default:"Message" }}',
+                  text: '{{ message|escapejs }}',
+                  timer: 3000,
+                  showConfirmButton: false
+              });
+          {% endfor %}
+      {% endif %}
+    });
+  </script>
+</body>
+</html>

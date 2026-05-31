@@ -1,0 +1,150 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Add New User</title>
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+<div class="flex min-h-screen">
+
+  <!-- =================================================================== -->
+  <!-- --- SIDEBAR INTEGRATION --- -->
+  <!-- =================================================================== -->
+  {% include "includes/sidebar.html" %}
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-4 md:p-6 flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+
+      <!-- PAGE HEADER -->
+      <header class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-gray-200">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">Add New User</h1>
+          <p class="mt-1 text-sm text-gray-600">Create a new user account and assign roles.</p>
+        </div>
+        <a href="{% url 'accounts:user_list' %}" class="mt-4 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+          ← Back to User List
+        </a>
+      </header>
+
+      <!-- Form -->
+      <form method="POST" novalidate id="userForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          {% for error in form.non_field_errors %}
+          <p class="text-sm">{{ error }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- ... (Rest of the form fields remain the same) ... -->
+        <div class="space-y-6">
+          <!-- Account Credentials -->
+          <div>
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Account Credentials</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">Username</label>
+                {{ form.username }}
+                {% if form.username.errors %}<p class="mt-1 text-sm text-red-600">{{ form.username.errors.0 }}</p>{% endif %}
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <div>
+                <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}<p class="mt-1 text-sm text-red-600">{{ form.password1.errors.0 }}</p>{% endif %}
+              </div>
+              <div>
+                <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700">Password confirmation</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}<p class="mt-1 text-sm text-red-600">{{ form.password2.errors.0 }}</p>{% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <!-- User Information -->
+          <div>
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">User Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">First Name</label>
+                {{ form.first_name }}
+              </div>
+              <div>
+                <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Last Name</label>
+                {{ form.last_name }}
+              </div>
+            </div>
+            <div class="mt-4">
+                <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">Email Address</label>
+                {{ form.email }}
+            </div>
+          </div>
+
+          <!-- Permissions & Roles -->
+          <div>
+            <h2 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Permissions & Roles</h2>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex items-center">{{ form.admin }}<label class="ml-2 block text-sm text-gray-900">Admin</label></div>
+              <div class="flex items-center">{{ form.secretariat }}<label class="ml-2 block text-sm text-gray-900">Secretariat</label></div>
+              <div class="flex items-center">{{ form.stakeholder }}<label class="ml-2 block text-sm text-gray-900">Stakeholder</label></div>
+              <div class="flex items-center">{{ form.user }}<label class="ml-2 block text-sm text-gray-900">User</label></div>
+              <div class="flex items-center">{{ form.researcher }}<label class="ml-2 block text-sm text-gray-900">Researcher</label></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="mt-8 pt-4 border-t border-gray-200 flex justify-end">
+          <button type="button" id="submitBtn" class="w-full sm:w-auto inline-flex items-center justify-center bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">
+            Create User
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  document.getElementById('submitBtn').addEventListener('click', function(e) {
+    Swal.fire({
+      title: 'Confirm Creation',
+      text: "Are you sure you want to create this user?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, create it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        document.getElementById('userForm').submit();
+      }
+    });
+  });
+
+  {% if messages %}
+    {% for message in messages %}
+      Swal.fire({
+        icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+        title: '{{ message }}',
+        showConfirmButton: true,
+      });
+    {% endfor %}
+  {% endif %}
+</script>
+</body>
+</html>
+    </div>
+  </main>
+</div>
+</body>
+</html>

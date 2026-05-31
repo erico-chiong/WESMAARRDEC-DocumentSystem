@@ -1,0 +1,434 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    .flatpickr-calendar { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 0.5rem; }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #4f46e5; border-color: #4f46e5; }
+    .flatpickr-day.inRange { background: #e0e7ff; }
+    .clickable-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .clickable-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); }
+    /* From https://css.glass */
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="flex min-h-screen">
+    
+    {% include "includes/sidebar.html" %}
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-6">
+      <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+        
+        <!-- Header: Dynamic Title and Filters -->
+        <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-gray-200 gap-4">
+          <h1 id="dynamic-title" class="font-bold text-gray-800 text-2xl">Dashboard</h1>
+          
+          <!-- =================================================================== -->
+          <!-- --- THIS IS THE CORRECTED FILTER CONTROLS SECTION --- -->
+          <!-- =================================================================== -->
+          <div class="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+            <label class="text-sm font-medium text-gray-700 flex-shrink-0">Filter by:</label>
+            
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+              <!-- DATE PICKER (auto-ranges between today and picked date) -->
+              <input id="dateRangePicker" type="text" placeholder="Select a date" class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm w-full sm:w-64 text-center">
+              
+              <span class="hidden sm:block text-sm text-gray-500">or</span>
+
+              <!-- MONTH & YEAR DROPDOWNS (GROUPED) -->
+              <div class="flex items-center gap-2">
+                <select id="monthSelect" class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
+                  <option value="all" {% if default_month == 'all' %}selected{% endif %}>All Months</option>
+                  {% for month_num, month_name in month_list %}
+                    <option value="{{ month_num }}" {% if month_num == default_month %}selected{% endif %}>{{ month_name }}</option>
+                  {% endfor %}
+                </select>
+                <select id="yearSelect" class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
+                  <option value="" {% if not default_year %}selected{% endif %}>All Time</option>
+                  {% for y in year_list %}
+                    <option value="{{ y }}" {% if y == default_year %}selected{% endif %}>{{ y }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Content Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 grid grid-cols-2 md:grid-cols-6 gap-4">
+          <!-- Total Documents Card -->
+          <div id="total-documents-card" class="clickable-card col-span-2 md:col-span-6 bg-gray-700 shadow-lg rounded-xl p-4 flex items-center justify-between border-l-4 border-gray-800">
+            <h2 class="font-semibold text-white text-lg uppercase tracking-wide">Total Documents</h2>
+            <p id="total-card" class="font-bold text-white text-5xl">0</p>
+          </div>
+          
+          <!-- Document Type Cards -->
+          <div id="memorandum-card" data-doc-type="memorandum" class="clickable-card col-span-1 md:col-span-2 bg-red-600 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-red-700 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">Memorandums</h2>
+            <p id="memorandum-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+          <div id="travel-order-card" data-doc-type="travel_order" class="clickable-card col-span-1 md:col-span-2 bg-yellow-500 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-yellow-600 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">Travel Orders</h2>
+            <p id="travel_order-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+          <div id="special-order-card" data-doc-type="special_order" class="clickable-card col-span-1 md:col-span-2 bg-purple-600 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-purple-700 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">Special Orders</h2>
+            <p id="special_order-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+
+          <!-- =================================================================== -->
+          <!-- --- THIS IS THE UPDATED SECTION --- -->
+          <!-- =================================================================== -->
+          <div id="communication-letter-card" data-doc-type="communication_letter" class="clickable-card col-span-1 md:col-span-2 bg-blue-600 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-cyan-700 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">Comm. Letters</h2>
+            <p id="communication_letter-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+          <div id="moau-card" data-doc-type="moau" class="clickable-card col-span-1 md:col-span-2 bg-orange-500 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-orange-600 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">MOAUs</h2>
+            <p id="moau-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+          <!-- =================================================================== -->
+
+          <div id="other-document-card" data-doc-type="other_document" class="clickable-card col-span-1 md:col-span-2 bg-gray-500 shadow-lg rounded-xl p-4 flex flex-col justify-between border-l-4 border-gray-600 h-32">
+            <h2 class="font-semibold text-white text-sm uppercase tracking-wide">Other Docs</h2>
+            <p id="other_document-count" class="font-bold text-white text-4xl text-center self-center">0</p>
+          </div>
+        </div>
+          
+          <!-- Pie Chart -->
+          <div class="lg:col-span-1 bg-white p-4 rounded-lg shadow-inner border">
+            <h2 class="mb-4 font-semibold text-gray-800 text-center text-lg">Incoming vs. Outgoing</h2>
+            <div class="relative w-full h-64 sm:h-72 flex justify-center items-center">
+              <canvas id="directionPieChart" style="cursor: pointer;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- JS for the Date Picker -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- ELEMENT REFERENCES ---
+      const monthSelect = document.getElementById('monthSelect');
+      const yearSelect = document.getElementById('yearSelect');
+      const datePickerInput = document.getElementById('dateRangePicker');
+      const dynamicTitle = document.getElementById('dynamic-title');
+      const pieChartCanvas = document.getElementById('directionPieChart').getContext('2d');
+      let directionChart = null;
+      let datePickerInstance = null;
+
+      // --- STATE MANAGEMENT ---
+      let activeFilter = 'month_year'; // 'month_year' or 'date_range'
+      let dateRange = { start: null, end: null };
+      let currentData = { cards: {}, direction: {} };
+
+      // --- HELPER FUNCTIONS ---
+      function toYMD(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      function toLocalDate(dateObj) {
+        return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+      }
+
+      function buildQuery() {
+        if (activeFilter === 'date_range' && dateRange.start && dateRange.end) {
+          return `?start_date=${dateRange.start}&end_date=${dateRange.end}`;
+        }
+        
+        // For month_year filter
+        const month = monthSelect.value;
+        const year = yearSelect.value;
+        
+        // Handle "All Months" case properly
+        if (month === 'all' && year) {
+          // All months for a specific year
+          return `?year=${year}&month=all`;
+        } else if (month && month !== 'all' && year) {
+          // Specific month and year
+          return `?month=${month}&year=${year}`;
+        } else if (year && (!month || month === '')) {
+          // Only year selected - show all months for that year
+          return `?year=${year}&month=all`;
+        } else if (!year && !month) {
+          // Neither selected - show all time
+          return `?all_time=true`;
+        } else if (!year && month === 'all') {
+          // All months selected but no year - show all time
+          return `?all_time=true`;
+        } else if (!year && month && month !== 'all') {
+          // Only month selected without year - use current year
+          const currentYear = new Date().getFullYear();
+          return `?month=${month}&year=${currentYear}`;
+        }
+        
+        // Default fallback
+        return `?all_time=true`;
+      }
+
+      function buildDocumentListURL(docType = '', category = '', recipient = '', search = '') {
+  const baseURL = '/documents/';
+  let params = new URLSearchParams();
+
+  // Always include all parameters
+  params.append('doc_type', docType || '');
+  params.append('category', category || '');
+  params.append('recipient', recipient || '');
+  params.append('search', search || '');
+  
+  if (activeFilter === 'date_range' && dateRange.start && dateRange.end) {
+    params.append('start_date', dateRange.start);
+    params.append('end_date', dateRange.end);
+  } else {
+    const month = monthSelect.value;
+    const year = yearSelect.value;
+
+    if (month && month !== 'all' && year) {
+      // Specific month and year
+      const monthNum = String(month).padStart(2, '0');
+      const lastDay = new Date(year, month, 0).getDate();
+      params.append('start_date', `${year}-${monthNum}-01`);
+      params.append('end_date', `${year}-${monthNum}-${lastDay.toString().padStart(2, '0')}`);
+    } else if (year) {
+      // Only year selected, all months
+      params.append('start_date', `${year}-01-01`);
+      params.append('end_date', `${year}-12-31`);
+    } else {
+      // All time
+      params.append('start_date', '');
+      params.append('end_date', '');
+    }
+  }
+
+  return `${baseURL}?${params.toString()}`;
+}
+
+
+      function updateCard(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || 0;
+      }
+
+      function generateTitle() {
+        const monthNames = [
+          'January', 'February', 'March', 'April', 'May', 'June',
+          'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        if (activeFilter === 'date_range' && dateRange.start && dateRange.end) {
+          // Parse as local dates to avoid timezone shifting
+          const start = new Date(`${dateRange.start}T00:00:00`);
+          const end = new Date(`${dateRange.end}T00:00:00`);
+          
+          // Check if it's exactly one month
+          if (start.getDate() === 1 && 
+              end.getMonth() === start.getMonth() && 
+              end.getFullYear() === start.getFullYear() &&
+              end.getDate() === new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()) {
+            return `Summary of ${monthNames[start.getMonth()]} ${start.getFullYear()}`;
+          }
+          
+          const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return `Summary from ${startStr} to ${endStr}`;
+        }
+        
+        const month = monthSelect.value;
+        const year = yearSelect.value;
+        
+        if (month === 'all' && year) {
+          // All months for a specific year
+          return `Summary of ${year}`;
+        } else if (month && month !== 'all' && year) {
+          // Specific month and year
+          return `Summary of ${monthNames[month - 1]} ${year}`;
+        } else if (year && (!month || month === '')) {
+          // Only year selected - show all months for that year
+          return `Summary of ${year}`;
+        } else if (!year && !month) {
+          // All time
+          return 'Summary of All Time';
+        } else if (!year && month === 'all') {
+          // All months, no year - all time
+          return 'Summary of All Time';
+        } else if (!year && month && month !== 'all') {
+          // Only month selected - use current year
+          const currentYear = new Date().getFullYear();
+          return `Summary of ${monthNames[month - 1]} ${currentYear}`;
+        } else {
+          // Default fallback
+          return 'Summary of All Time';
+        }
+      }
+
+      function updateTitle() {
+        dynamicTitle.textContent = generateTitle();
+      }
+
+      // --- CORE DATA FETCHING ---
+      async function fetchDashboardData() {
+        const query = buildQuery();
+        try {
+          const [cardsResponse, directionResponse] = await Promise.all([
+            fetch(`/dashboard/cards/${query}`),
+            fetch(`/dashboard/direction/${query}`)
+          ]);
+
+          if (cardsResponse.ok) {
+            const data = await cardsResponse.json();
+            currentData.cards = data;
+            updateCard('total-card', data.total);
+            for (const [type, count] of Object.entries(data.counts)) {
+              updateCard(`${type}-count`, count);
+            }
+          }
+
+          if (directionResponse.ok) {
+            const data = await directionResponse.json();
+            currentData.direction = data;
+            renderPieChart(data.incoming, data.outgoing);
+          }
+
+          updateTitle();
+        } catch (error) {
+          console.error("Failed to fetch dashboard data:", error);
+        }
+      }
+
+      function renderPieChart(incoming, outgoing) {
+      const dataPoints = [incoming || 0, outgoing || 0];
+
+      // Register the plugin globally so Chart.js knows about it
+      Chart.register(ChartDataLabels);
+
+      if (!directionChart) {
+        directionChart = new Chart(pieChartCanvas, {
+          type: 'pie',
+          data: {
+            labels: ['Incoming', 'Outgoing'],
+            datasets: [{
+              data: dataPoints,
+              backgroundColor: ['#305a40ff', '#57df85ff'], // Green-600, Red-600
+              borderColor: '#FFFFFF',
+              borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+              },
+              // Configure the new datalabels plugin
+              datalabels: {
+                // This function determines what text is shown
+                formatter: (value, context) => {
+                  // Don't show a '0'
+                  return value > 0 ? value : '';
+                },
+                color: '#fff', // Color of the text
+                font: {
+                  weight: 'bold',
+                  size: 16,
+                }
+              }
+            }
+          }
+        });
+      } else {
+        directionChart.data.datasets[0].data = dataPoints;
+        directionChart.update();
+      }
+    }
+      // --- EVENT LISTENERS ---
+      
+      // Initialize Date Picker
+      datePickerInstance = flatpickr(datePickerInput, {
+        mode: "single",
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "M j, Y",
+        onClose: function(selectedDates) {
+          if (selectedDates.length === 1) {
+            activeFilter = 'date_range';
+
+            const picked = toLocalDate(selectedDates[0]);
+            const today = toLocalDate(new Date());
+
+            const start = picked <= today ? picked : today;
+            const end = picked <= today ? today : picked;
+
+            dateRange.start = toYMD(start);
+            dateRange.end = toYMD(end);
+
+            // Reset month/year selections (date filter is now active)
+            monthSelect.value = "all";
+            yearSelect.value = "";
+
+            fetchDashboardData();
+          }
+        }
+      });
+
+      // Handle Month/Year selection
+      function handleMonthYearChange() {
+        activeFilter = 'month_year';
+        dateRange.start = null;
+        dateRange.end = null;
+        datePickerInstance.clear();
+
+        fetchDashboardData();
+      }
+
+      monthSelect.addEventListener('change', handleMonthYearChange);
+      yearSelect.addEventListener('change', handleMonthYearChange);
+
+      // --- CLICK HANDLERS FOR CARDS ---
+      
+      // Total documents card
+      document.getElementById('total-documents-card').addEventListener('click', () => {
+        const url = buildDocumentListURL();
+        window.location.href = url;
+      });
+
+      // Document type cards
+      const docTypeCards = [
+        'memorandum-card', 'travel-order-card', 'special-order-card', 
+        'communication-letter-card', 'moau-card', 'other-document-card'
+      ];
+      
+      docTypeCards.forEach(cardId => {
+        const card = document.getElementById(cardId);
+        if (card) {
+          card.addEventListener('click', () => {
+            const docType = card.getAttribute('data-doc-type');
+            const url = buildDocumentListURL(docType);
+            window.location.href = url;
+          });
+        }
+      });
+
+      // --- INITIALIZATION ---
+      fetchDashboardData();
+    });
+  </script>
+</body>
+</html>

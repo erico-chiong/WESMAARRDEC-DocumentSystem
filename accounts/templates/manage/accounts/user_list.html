@@ -1,0 +1,177 @@
+{% load static %}
+{% load role_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Users</title>
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+<div class="flex min-h-screen">
+
+  {% include "includes/sidebar.html" %}
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-4 md:p-6">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+
+      <!-- PAGE HEADER -->
+      <header class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 pb-4 border-b border-gray-200">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">User Management</h1>
+          <p class="mt-1 text-sm text-gray-600">View, search, and manage all user accounts.</p>
+        </div>
+        <a href="{% url 'accounts:add_user' %}" class="mt-4 sm:mt-0 w-full sm:w-auto inline-flex items-center justify-center bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 11a1 1 0 100-2h-1v-1a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1z" />
+          </svg>
+          Add New User
+        </a>
+      </header>
+
+      <!-- Search Form -->
+      <div class="mb-4">
+        <form method="GET" action="{% url 'accounts:user_list' %}">
+          <div class="relative">
+            <input 
+              type="text" 
+              class="w-full sm:w-1/3 pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+              name="q" 
+              value="{{ search_query|default:'' }}" 
+              placeholder="Search by username..."
+            >
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- USER TABLE -->
+      <div class="overflow-x-auto border rounded-lg">
+        <table class="w-full bg-white divide-y divide-gray-200"> <!-- Use w-full instead of min-w-full -->
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th scope="col" class="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th scope="col" class="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Joined</th>
+              <th scope="col" class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for user in users_page %}
+            <tr class="hover:bg-gray-50">
+              
+              <!-- USER CELL (NOW FULLY RESPONSIVE) -->
+              <td class="px-4 py-4">
+                <div class="flex flex-col sm:flex-row sm:items-center">
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <img class="h-10 w-10 rounded-full" src="https://ui-avatars.com/api/?name={{ user.get_full_name|default:user.username|urlencode }}&background=random" alt="">
+                  </div>
+                  <div class="mt-2 sm:mt-0 sm:ml-4 text-center sm:text-left">
+                    <div class="text-sm font-medium text-gray-900 break-words">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="text-sm text-gray-500">@{{ user.username }}</div>
+                  </div>
+                </div>
+              </td>
+              
+              <!-- EMAIL CELL (NOW WRAPS) -->
+              <td class="hidden md:table-cell px-4 py-4 text-sm text-gray-700 break-all">{{ user.email|default:"N/A" }}</td>
+              
+              <!-- STATUS CELL -->
+              <td class="px-4 py-4 whitespace-nowrap text-center">
+                {% if user.is_active %}
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                {% else %}
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Inactive</span>
+                {% endif %}
+              </td>
+              
+              <!-- DATE JOINED CELL -->
+              <td class="hidden lg:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ user.date_joined|date:"M d, Y" }}</td>
+              
+              <!-- ACTIONS CELL -->
+              <td class="px-4 py-4 whitespace-nowrap text-center text-sm font-medium">
+                {% if user.id != request.user.id %}
+                  <div class="flex flex-col space-y-2 sm:space-y-0 sm:flex-row sm:items-center sm:justify-center sm:space-x-3">
+                    <a href="{% url 'accounts:edit_user' user.id %}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    {% if user.is_active %}
+                      <a href="{% url 'accounts:deactivate_user' user.id %}" class="text-yellow-600 hover:text-yellow-900 user-action" data-action="deactivate" data-username="{{ user.username }}">Deactivate</a>
+                    {% else %}
+                      <a href="{% url 'accounts:activate_user' user.id %}" class="text-green-600 hover:text-green-900 user-action" data-action="activate" data-username="{{ user.username }}">Activate</a>
+                    {% endif %}
+                    <a href="{% url 'accounts:delete_user' pk=user.pk %}" class="text-red-600 hover:text-red-900 user-action" data-action="delete" data-username="{{ user.username }}">Delete</a>
+                  </div>
+                {% else %}
+                  <span class="text-gray-400 italic">Self</span>
+                {% endif %}
+              </td>
+                
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-10 px-6 text-gray-500">No users found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  // Message handler for Django messages
+  {% if messages %}
+    {% for message in messages %}
+      Swal.fire({
+        icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+        title: '{{ message }}',
+        showConfirmButton: true,
+      });
+    {% endfor %}
+  {% endif %}
+
+  document.querySelectorAll('.user-action').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const action = this.getAttribute('data-action');
+      const username = this.getAttribute('data-username');
+      const url = this.getAttribute('href');
+
+      Swal.fire({
+        title: `Are you sure?`,
+        text: `You are about to ${action} user ${username}.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: `Yes, ${action}!`
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = url;
+        }
+      });
+    });
+  });
+</script>
+
+      <!-- PAGINATION -->
+      {% if users_page.paginator.num_pages > 1 %}
+      <div class="py-4 flex items-center justify-center">
+        {% include 'activities/partials/pagination.html' with page_obj=users_page page_range=page_range querystring=querystring %}
+      </div>
+      {% endif %}
+
+    </div>
+  </main>
+</div>
+</body>
+</html>

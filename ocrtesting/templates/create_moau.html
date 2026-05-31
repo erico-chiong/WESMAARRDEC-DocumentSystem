@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create MOA/U</title>
+  {% load static %}
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    .tags-input-container:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+    .page-indicator {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="bg-gray-200">
+
+  <div id="loading-overlay" class="hidden z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+    <div class="flex flex-col items-center">
+      <div class="border-4 border-gray-200 border-t-blue-500 rounded-full w-12 h-12 animate-spin"></div>
+      <p class="mt-2 text-white text-lg">Scanning, please wait…</p>
+    </div>
+  </div>
+
+  <div class="flex min-h-screen">
+    {% include "includes/sidebar.html" %}
+
+    <main class="bg-gray-50 md:shadow-lg mx-0 md:mx-5 md:my-5 p-2 sm:p-4 md:p-5 md:rounded-xl flex-1 transition-all duration-300">
+      <form id="document-form" method="post" enctype="multipart/form-data" class="flex md:flex-row flex-col md:space-x-4 h-full">
+        {% csrf_token %}
+        <input type="hidden" id="doc-type-input" value="{{ document_type }}">
+        {{ form.signatories_str }}
+
+        <!-- LEFT PANEL (File Upload) -->
+        <div class="flex flex-col bg-white shadow p-2 md:p-4 rounded-lg w-full md:w-3/5">
+          <div id="upload-area" class="relative flex-1 mb-4">
+            <label for="image" id="dropzone" class="relative flex flex-col justify-center items-center bg-gray-50 hover:bg-gray-100 border-2 border-gray-300 border-dashed rounded-lg w-full h-72 md:h-full overflow-hidden cursor-pointer">
+              <img id="preview" class="hidden absolute inset-0 rounded-lg w-full h-full object-contain" src="" alt="Preview"/>
+              <div id="placeholder" class="z-10 flex flex-col items-center">
+                <svg class="mb-2 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                <p class="text-gray-600 text-xs md:text-sm"><span class="font-semibold">Click to upload</span> or drag & drop</p>
+              </div>
+            </label>
+            <div id="image-slider" class="hidden relative w-full h-full overflow-hidden">
+              <div id="slides-wrapper" class="w-full h-full"></div>
+              <button id="prevBtn" type="button" class="hidden top-1/2 left-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">‹</button>
+              <button id="nextBtn" type="button" class="hidden top-1/2 right-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">›</button>
+            </div>
+            <button type="button" id="clearAllBtn" class="hidden top-2 right-2 z-20 absolute bg-white shadow-md p-2 rounded-full text-red-600 text-2xl">×</button>
+            <input id="image" name="files" type="file" accept="image/*,application/pdf" multiple class="hidden"/>
+          </div>
+          <div class="flex justify-center space-x-2 mb-4">
+            <label for="image" id="uploadBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white cursor-pointer">Upload</label>
+            <label for="image" id="takePhotoBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white cursor-pointer">Take Photo</label>
+            <button type="button" id="scanBtn" class="hidden bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 px-4 py-2 rounded text-white">Scan Document</button>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL (MOAU Form Fields) -->
+        <div class="flex flex-col bg-white shadow mt-2 md:mt-0 p-4 rounded-lg w-full md:w-2/5">
+          <h2 class="mb-4 font-bold text-xl text-center">Save MOA/U</h2>
+          {% if form.errors %}
+            <div class="bg-red-50 mb-4 p-3 border border-red-300 rounded text-red-700">
+              <strong>Please fix these:</strong>
+              <ul class="text-sm list-disc list-inside">{% for f in form %}{% for e in f.errors %}<li>{{ f.label }}: {{ e }}</li>{% endfor %}{% endfor %}{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+            </div>
+          {% endif %}
+          <div class="flex-1 space-y-4 overflow-auto">
+            <div><label for="id_subject" class="block font-medium text-gray-700 text-sm">Subject</label>{{ form.subject }}</div>
+            <div><label for="id_first_party_agency" class="block font-medium text-gray-700 text-sm">First Party Agency (Optional)</label>{{ form.first_party_agency }}</div>
+            <div><label for="id_first_party_representative" class="block font-medium text-gray-700 text-sm">First Party Representative (Optional)</label>{{ form.first_party_representative }}</div>
+            <div><label for="id_second_party_agency" class="block font-medium text-gray-700 text-sm">Second Party Agency (Optional)</label>{{ form.second_party_agency }}</div>
+            <div><label for="id_second_party_representative" class="block font-medium text-gray-700 text-sm">Second Party Representative (Optional)</label>{{ form.second_party_representative }}</div>
+            <div><label for="id_date" class="block font-medium text-gray-700 text-sm">Date (Optional)</label>{{ form.date }}</div>
+            
+            <!-- =================================================================== -->
+            <!-- --- NEW FIELDS ADDED HERE --- -->
+            <!-- =================================================================== -->
+            <div>
+              <label for="id_received_by" class="block font-medium text-gray-700 text-sm">Received By</label>
+              {{ form.received_by }}
+            </div>
+
+            <div>
+              <label for="id_remarks" class="block font-medium text-gray-700 text-sm">Remarks (Optional)</label>
+              {{ form.remarks }}
+            </div>
+            
+            <!-- Signatories Tags Input -->
+            <div class="relative mb-4">
+                <label class="block font-medium text-gray-700 text-sm">Signatories</label>
+                <div id="signatory-tags-container" class="flex flex-wrap items-center gap-2 mt-1 p-2 border border-gray-300 rounded min-h-[42px] tags-input-container">
+                    <input type="text" id="signatory-input" class="flex-grow p-1 outline-none" placeholder="Type a name and press Enter...">
+                </div>
+            </div>
+
+            <!-- Recipients Field -->
+            <div id="recipient-field" class="relative mb-4">
+              <label class="block font-medium text-gray-700 text-sm cursor-pointer">Recipients</label>
+              <div id="recipient-tags" class="flex flex-wrap items-center gap-2 mt-1 p-2 border border-gray-300 rounded min-h-[42px] cursor-pointer"></div>
+              <ul id="recipient-dropdown" class="hidden top-full left-0 z-20 absolute bg-white mt-1 border border-gray-300 rounded w-full max-h-40 overflow-auto">
+                {% for r in recipient_list %}<li data-id="{{ r.id }}" class="hover:bg-gray-100 px-3 py-2 cursor-pointer">{{ r.name }}</li>{% endfor %}
+              </ul>
+              <div class="hidden">{{ form.recipients }}</div>
+            </div>
+          </div>
+          <div class="mt-6"><button type="submit" class="bg-green-600 hover:bg-green-700 py-2 rounded w-full text-white">Save Document</button></div>
+        </div>
+      </form>
+      
+      <!-- OCR DEBUGGING SECTION -->
+      <div id="ocr-debug-container" class="hidden mt-4 bg-gray-800 text-white p-4 rounded-lg shadow-inner">
+        <div class="flex justify-between items-center mb-2">
+            <h3 class="font-bold text-lg">OCR Debugging Output</h3>
+            <button id="toggle-ocr-text" class="text-sm text-gray-400 hover:text-white">[ Hide ]</button>
+        </div>
+        <pre id="ocr-raw-text" class="whitespace-pre-wrap text-xs font-mono bg-black bg-opacity-25 p-3 rounded-md max-h-64 overflow-y-auto"></pre>
+      </div>
+    </main>
+  </div>
+
+<script>
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+document.addEventListener('DOMContentLoaded', () => {
+  // --- ELEMENT REFS ---
+  const uploadArea = document.getElementById('upload-area');
+  const dropzone = document.getElementById('dropzone');
+  const imageInput = document.getElementById('image');
+  const slider = document.getElementById('image-slider');
+  const slidesWrapper = document.getElementById('slides-wrapper');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const takePhotoBtn = document.getElementById('takePhotoBtn');
+  const scanBtn = document.getElementById('scanBtn');
+  const docTypeInput = document.getElementById('doc-type-input');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const ocrDebugContainer = document.getElementById('ocr-debug-container');
+  const ocrRawTextElement = document.getElementById('ocr-raw-text');
+  const toggleOcrButton = document.getElementById('toggle-ocr-text');
+
+  let slides = [], currentIndex = 0;
+  let allFiles = []; // Persistent storage for all files
+
+  // --- FILE UPLOAD LOGIC ---
+  function showSlide(idx) {
+    slides.forEach((s, i) => s.classList.toggle('hidden', i !== idx));
+  }
+
+  function updateUI() {
+    uploadBtn.classList.toggle('hidden', allFiles.length > 0);
+    takePhotoBtn.classList.toggle('hidden', allFiles.length > 0);
+    prevBtn.classList.toggle('hidden', allFiles.length <= 1);
+    nextBtn.classList.toggle('hidden', allFiles.length <= 1);
+  }
+
+  function renderSlider() {
+    slidesWrapper.innerHTML = '';
+    slides = [];
+    currentIndex = 0;
+
+    if (allFiles.length === 0) {
+      dropzone.classList.remove('hidden');
+      slider.classList.add('hidden');
+      clearAllBtn.classList.add('hidden');
+      scanBtn.classList.add('hidden');
+      updateUI();
+      return;
+    }
+
+    dropzone.classList.add('hidden');
+    slider.classList.remove('hidden');
+    clearAllBtn.classList.remove('hidden');
+    scanBtn.classList.remove('hidden');
+    
+    allFiles.forEach((file, index) => {
+      const slide = document.createElement('div');
+      slide.className = 'slide hidden w-full h-full flex items-center justify-center relative';
+      
+      const indicator = document.createElement('div');
+      indicator.className = 'page-indicator';
+      indicator.textContent = `Page ${index + 1}`;
+      
+      if (docTypeInput.value === 'moau' && allFiles.length > 2 && !file.type.includes('pdf')) {
+        if (index === 0 || index === allFiles.length - 2 || index === allFiles.length - 1) {
+          indicator.textContent += ' (will scan)';
+          indicator.classList.add('bg-green-600');
+        } else {
+          indicator.textContent += ' (skip)';
+          indicator.classList.add('bg-gray-500');
+        }
+      }
+      slide.appendChild(indicator);
+      
+      if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'object-contain max-w-full max-h-full';
+        slide.appendChild(img);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = file.name;
+        p.className = 'text-sm text-gray-700';
+        slide.appendChild(p);
+      }
+      slidesWrapper.appendChild(slide);
+      slides.push(slide);
+    });
+    
+    showSlide(0);
+    updateUI();
+  }
+
+  const documentForm = document.getElementById('document-form');
+  documentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (allFiles.length === 0) {
+      alert('Please upload at least one file.');
+      return;
+    }
+
+    loadingOverlay.classList.remove('hidden');
+    const formData = new FormData(documentForm);
+    
+    // Ensure all files are in the FormData
+    formData.delete('files'); // Clear any existing
+    allFiles.forEach(file => formData.append('files', file));
+
+    try {
+      const response = await fetch(documentForm.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        // If not redirected, it might be a validation error (HTML) or a JSON error
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          if (data.error) alert(data.error);
+          loadingOverlay.classList.add('hidden');
+        } else {
+          // Likely HTML with validation errors - replace the whole page to show them
+          const html = await response.text();
+          document.open();
+          document.write(html);
+          document.close();
+        }
+      }
+    } catch (error) {
+      console.error('Submission failed:', error);
+      alert('An error occurred while saving the document.');
+      loadingOverlay.classList.add('hidden');
+    }
+  });
+
+  let isUpdatingFiles = false;
+  function updateInputFiles() {
+    isUpdatingFiles = true;
+    const dt = new DataTransfer();
+    allFiles.forEach(file => dt.items.add(file));
+    imageInput.files = dt.files;
+    setTimeout(() => { isUpdatingFiles = false; }, 0);
+  }
+
+  [dropzone, uploadBtn, takePhotoBtn].forEach(el => {
+    if (el) el.addEventListener('click', () => { /* No longer clearing allFiles here */ });
+  });
+
+  // DRAG AND DROP HANDLING
+  ['dragover', 'dragenter'].forEach(evt => {
+    uploadArea.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  ['dragleave', 'dragend', 'drop'].forEach(evt => {
+    uploadArea.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  uploadArea.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) {
+      allFiles = [...allFiles, ...files];
+      updateInputFiles();
+      renderSlider();
+    }
+  });
+
+  imageInput.addEventListener('change', e => {
+    if (isUpdatingFiles) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    allFiles = [...allFiles, ...files];
+    updateInputFiles();
+    renderSlider();
+  });
+
+  prevBtn.addEventListener('click', () => { 
+    currentIndex = (currentIndex - 1 + slides.length) % slides.length; 
+    showSlide(currentIndex); 
+  });
+  
+  nextBtn.addEventListener('click', () => { 
+    currentIndex = (currentIndex + 1) % slides.length; 
+    showSlide(currentIndex); 
+  });
+  
+  clearAllBtn.addEventListener('click', () => {
+    allFiles = [];
+    imageInput.value = ''; 
+    renderSlider();
+  });
+
+  // --- SCANNING LOGIC ---
+  scanBtn.addEventListener('click', async () => {
+    if (allFiles.length === 0) { 
+      alert('Please select a file to scan first.'); 
+      return; 
+    }
+    
+    loadingOverlay.classList.remove('hidden');
+    const formData = new FormData();
+    const isPDF = allFiles[0]?.type === 'application/pdf';
+    const docType = docTypeInput.value;
+
+    console.log("Scanning:", { docType, isPDF, fileCount: allFiles.length, files: allFiles.map(f => f.name) });
+
+    if (docType === 'moau' && !isPDF && allFiles.length > 2) {
+      formData.append('files', allFiles[0]);
+      formData.append('files', allFiles[allFiles.length - 2]);
+      formData.append('files', allFiles[allFiles.length - 1]);
+      console.log("Sending MOAU images (first, second-to-last & last):", allFiles[0].name, allFiles[allFiles.length - 2].name, allFiles[allFiles.length - 1].name);
+    } else if (docType === 'moau' && !isPDF && allFiles.length === 2) {
+      formData.append('files', allFiles[0]);
+      formData.append('files', allFiles[1]);
+      console.log("Sending MOAU images (both files):", allFiles[0].name, allFiles[1].name);
+    } else {
+      formData.append('file', allFiles[0]);
+      console.log("Sending single file:", allFiles[0].name);
+    }
+
+    formData.append('doc_type', docType);
+
+    try {
+      const response = await fetch("{% url 'ocrtesting:scan_document' %}", {
+        method: 'POST', body: formData, headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+      
+      if (!response.ok) { 
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! Status: ${response.status}`); 
+      }
+      
+      const data = await response.json();
+      console.log("Scan response:", data);
+      
+      if (data.raw_ocr_text) {
+        ocrRawTextElement.textContent = data.raw_ocr_text;
+        ocrDebugContainer.classList.remove('hidden');
+      }
+      
+      populateForm(data);
+    } catch (error) {
+      console.error('Scan failed:', error); 
+      alert(`An error occurred during scanning: ${error.message}`);
+    } finally {
+      loadingOverlay.classList.add('hidden');
+    }
+  });
+
+  // --- RECIPIENTS UI LOGIC ---
+  const recipientWrapper = document.getElementById('recipient-field');
+  const recipientDropdown = document.getElementById('recipient-dropdown');
+  const recipientTagsWrapper = document.getElementById('recipient-tags');
+  const recipientSelect = document.getElementById('id_recipients');
+  const recipientLabel = recipientWrapper.querySelector('label');
+  
+  function toggleRecipientDropdown() { 
+    refreshRecipientDropdown(); 
+    recipientDropdown.classList.toggle('hidden'); 
+  }
+  
+  function refreshRecipientDropdown() {
+    recipientDropdown.querySelectorAll('li').forEach(li => {
+      const opt = recipientSelect.querySelector(`option[value="${li.dataset.id}"]`);
+      li.classList.toggle('hidden', opt && opt.selected);
+    });
+  }
+  
+  recipientLabel.addEventListener('click', toggleRecipientDropdown);
+  recipientTagsWrapper.addEventListener('click', (e) => { if (e.target === recipientTagsWrapper) { toggleRecipientDropdown(); } });
+  document.addEventListener('click', e => { if (!recipientWrapper.contains(e.target)) { recipientDropdown.classList.add('hidden'); } });
+  
+  recipientDropdown.querySelectorAll('li').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = item.dataset.id; 
+      const name = item.textContent.trim();
+      const tag = document.createElement('span');
+      tag.className = 'bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-2';
+      tag.textContent = name;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.innerHTML = '×'; btn.className = 'font-bold text-blue-500 hover:text-blue-700';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        recipientSelect.querySelector(`option[value="${id}"]`).selected = false;
+        recipientTagsWrapper.removeChild(tag); 
+        refreshRecipientDropdown();
+      });
+      tag.appendChild(btn); 
+      recipientTagsWrapper.appendChild(tag);
+      recipientSelect.querySelector(`option[value="${id}"]`).selected = true;
+      recipientDropdown.classList.add('hidden'); 
+      item.classList.add('hidden');
+    });
+  });
+
+  // --- SIGNATORY TAGS INPUT ---
+  const signatoryContainer = document.getElementById('signatory-tags-container');
+  const signatoryInput = document.getElementById('signatory-input');
+  const hiddenSignatoriesInput = document.getElementById('id_signatories_str');
+  
+  let signatoryTags = [];
+
+  function renderSignatoryTags() {
+    signatoryContainer.querySelectorAll('.tag').forEach(tag => tag.remove());
+    for (const tagName of signatoryTags) {
+      const tagElement = createTagElement(tagName);
+      signatoryContainer.insertBefore(tagElement, signatoryInput);
+    }
+    hiddenSignatoriesInput.value = signatoryTags.join(',');
+  }
+  
+  function createTagElement(name) {
+    const tag = document.createElement('span');
+    tag.className = 'tag bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full flex items-center gap-2';
+    tag.textContent = name;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.innerHTML = '×'; btn.className = 'font-bold text-purple-500 hover:text-purple-700';
+    btn.addEventListener('click', () => {
+      signatoryTags = signatoryTags.filter(t => t !== name);
+      renderSignatoryTags();
+    });
+    tag.appendChild(btn);
+    return tag;
+  }
+  
+  signatoryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const tagName = signatoryInput.value.trim();
+      if (tagName && !signatoryTags.includes(tagName)) {
+        signatoryTags.push(tagName);
+        renderSignatoryTags();
+      }
+      signatoryInput.value = '';
+    }
+  });
+
+  signatoryContainer.addEventListener('click', () => {
+    signatoryInput.focus();
+  });
+
+  function populateForm(data) {
+    console.log("Received data for form population:", data);
+
+    // --- Step 1: Populate the standard text fields ---
+    if (data.subject) document.getElementById('id_subject').value = data.subject;
+    if (data.date) document.getElementById('id_date').value = data.date;
+    if (data.first_party_agency) document.getElementById('id_first_party_agency').value = data.first_party_agency;
+    if (data.first_party_representative) document.getElementById('id_first_party_representative').value = data.first_party_representative;
+    if (data.second_party_agency) document.getElementById('id_second_party_agency').value = data.second_party_agency;
+    if (data.second_party_representative) document.getElementById('id_second_party_representative').value = data.second_party_representative;
+    
+    // --- Step 2: Populate recipients (your existing logic is correct) ---
+    if (data.recipient_ids && data.recipient_ids.length > 0) {
+      recipientTagsWrapper.innerHTML = '';
+      recipientSelect.querySelectorAll('option').forEach(opt => opt.selected = false);
+      const recipientDropdown = document.getElementById('recipient-dropdown');
+      data.recipient_ids.forEach(id => {
+        const listItem = recipientDropdown.querySelector(`li[data-id="${id}"]`);
+        if (listItem && !listItem.classList.contains('hidden')) { 
+          listItem.click(); 
+        }
+      });
+    }
+
+    // --- Step 3: Populate signatories directly and robustly ---
+    if (data.signatory_names && data.signatory_names.length > 0) {
+        console.log("Current signatory tags (before update):", signatoryTags);
+        console.log("Signatory names from scan:", data.signatory_names);
+
+        // This is the fix. We use a Set to merge the existing tags with the
+        // new tags from the scan, which automatically handles duplicates and
+        // preserves any tags the user typed manually before scanning.
+        const combinedSignatories = new Set([...signatoryTags, ...data.signatory_names]);
+        
+        signatoryTags = Array.from(combinedSignatories);
+        
+        console.log("Combined signatory tags (after update):", signatoryTags);
+        renderSignatoryTags(); // Re-render the visual tags
+    }
+  }
+
+
+  
+  // --- OCR DEBUG TOGGLE ---
+  toggleOcrButton.addEventListener('click', () => {
+    ocrDebugContainer.classList.toggle('hidden');
+  });
+  
+  // --- INITIALIZATION ---
+  updateUI();
+});
+</script>
+
+</body>
+</html>

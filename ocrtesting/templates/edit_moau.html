@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit MOA/U</title>
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    .tags-input-container:focus-within {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex">
+  
+  <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="flex flex-col items-center">
+      <div class="w-12 h-12 border-4 border-t-blue-500 border-gray-200 rounded-full animate-spin"></div>
+      <p class="mt-2 text-white text-lg">Scanning, please wait…</p>
+    </div>
+  </div>
+
+  {% include "includes/sidebar.html" %}
+
+  <div class="flex-1">
+    <form
+      id="document-form"
+      method="post"
+      enctype="multipart/form-data"
+      action="{% url 'ocrtesting:edit_moau' document.pk %}"
+      class="flex w-full space-x-2 p-4"
+    >
+      {% csrf_token %}
+      <input type="hidden" id="doc-type-input" value="moau">
+      {{ form.signatories_str }}
+
+      <!-- LEFT PANEL (File Upload Logic) -->
+      <div id="left-panel" class="w-3/5 bg-white rounded-lg shadow flex flex-col p-4">
+        <div class="relative flex-1 mb-4">
+          <label for="image" id="dropzone" class="absolute inset-0 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:bg-gray-100 cursor-pointer">
+            <div id="placeholder" class="flex flex-col items-center">
+              <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+              <p class="text-gray-600 text-sm"><span class="font-semibold">Click to upload</span> or drag & drop</p>
+            </div>
+          </label>
+          <div id="image-slider" class="hidden relative w-full h-full overflow-hidden">
+            <div id="slides-wrapper" class="w-full h-full flex"></div>
+            <button id="prevBtn" type="button" class="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-75 rounded-full p-2 hover:bg-opacity-100 hidden">‹</button>
+            <button id="nextBtn" type="button" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-75 rounded-full p-2 hover:bg-opacity-100 hidden">›</button>
+          </div>
+          <button type="button" id="clearAllBtn" class="absolute top-2 right-2 z-20 hidden text-red-600 text-2xl bg-white p-2 rounded-full shadow-md">×</button>
+          <input id="image" name="files" type="file" accept="image/*,application/pdf" multiple class="hidden"/>
+        </div>
+        <div class="flex justify-center space-x-2 mb-4">
+            <label for="image" id="uploadBtn" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 cursor-pointer">Upload</label>
+            <label for="image" id="takePhotoBtn" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 cursor-pointer">Take Photo</label>
+            <button type="button" id="scanBtn" class="hidden bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Scan Document</button>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL (MOAU Form Fields) -->
+      <div class="w-2/5 bg-white rounded-lg shadow flex flex-col p-4">
+        <h2 class="text-xl font-bold mb-4 text-center">Edit MOA/U</h2>
+        {% if form.errors %}
+          <div class="mb-4 bg-red-50 border border-red-300 text-red-700 p-3 rounded"><strong>Please fix these:</strong><ul class="list-disc list-inside text-sm">{% for f in form %}{% for e in f.errors %}<li>{{ f.label }}: {{ e }}</li>{% endfor %}{% endfor %}{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+        {% endif %}
+        <div class="flex-1 space-y-4 overflow-auto">
+          <div><label for="id_subject" class="block text-sm font-medium text-gray-700">Subject</label>{{ form.subject }}</div>
+          <div><label for="id_first_party_agency" class="block text-sm font-medium text-gray-700">First Party Agency (Optional)</label>{{ form.first_party_agency }}</div>
+          <div><label for="id_first_party_representative" class="block text-sm font-medium text-gray-700">First Party Representative (Optional)</label>{{ form.first_party_representative }}</div>
+          <div><label for="id_second_party_agency" class="block text-sm font-medium text-gray-700">Second Party Agency (Optional)</label>{{ form.second_party_agency }}</div>
+          <div><label for="id_second_party_representative" class="block text-sm font-medium text-gray-700">Second Party Representative (Optional)</label>{{ form.second_party_representative }}</div>
+          <div><label for="id_date" class="block text-sm font-medium text-gray-700">Date (Optional)</label>{{ form.date }}</div>
+          
+          <div class="relative mb-4">
+              <label class="block text-sm font-medium text-gray-700">Signatories</label>
+              <div id="signatory-tags-container" class="tags-input-container mt-1 flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded min-h-[42px]">
+                  <input type="text" id="signatory-input" class="flex-grow p-1 outline-none" placeholder="Type a name and press Enter...">
+              </div>
+          </div>
+
+          <div id="recipient-field" class="relative mb-4">
+            <label class="block text-sm font-medium text-gray-700 cursor-pointer">Recipients</label>
+            <div id="recipient-tags" class="mt-1 flex flex-wrap items-center gap-2 p-2 border border-gray-300 rounded min-h-[42px] cursor-pointer"></div>
+            <ul id="recipient-dropdown" class="absolute z-20 top-full left-0 w-full bg-white border border-gray-300 rounded mt-1 max-h-40 overflow-auto hidden">
+              {% for r in recipient_list %}<li data-id="{{ r.id }}" class="px-3 py-2 hover:bg-gray-100 cursor-pointer">{{ r.name }}</li>{% endfor %}
+            </ul>
+            <div class="hidden">{{ form.recipients }}</div>
+          </div>
+
+          <!-- =================================================================== -->
+          <!-- --- NEW FIELDS ADDED HERE --- -->
+          <!-- =================================================================== -->
+          <div>
+            <label for="id_received_by" class="block text-sm font-medium text-gray-700">Received By</label>
+            {{ form.received_by }}
+          </div>
+          
+          <div>
+            <label for="id_remarks" class="block text-sm font-medium text-gray-700">Remarks (Optional)</label>
+            {{ form.remarks }}
+          </div>
+
+        </div>
+        <div class="mt-6 flex space-x-4">
+          <a href="{% url 'ocrtesting:view_moau' document.pk %}" class="flex-1 bg-gray-300 hover:bg-gray-400 py-2 rounded text-gray-800 text-center">Back</a>
+          <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded hover:bg-green-700">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const initialRecipientIds = {{ existing_recipient_ids|safe }};
+    const existingFiles = {{ existing_files_json|safe }};
+    const initialSignatoriesStr = "{{ form.signatories_str.value|escapejs }}";
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // ELEMENT REFS
+      const dropzone = document.getElementById('dropzone');
+      const imageInput = document.getElementById('image');
+      const slider = document.getElementById('image-slider');
+      const slidesWrapper = document.getElementById('slides-wrapper');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const clearAllBtn = document.getElementById('clearAllBtn');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const takePhotoBtn = document.getElementById('takePhotoBtn');
+      const scanBtn = document.getElementById('scanBtn');
+      const form = document.getElementById('document-form');
+      const loadingOverlay = document.getElementById('loading-overlay');
+      const docTypeInput = document.getElementById('doc-type-input');
+
+      let currentIndex = 0;
+      let slides = [];
+      let allFiles = [];
+
+      // FILE HANDLING LOGIC
+      function renderSlides() {
+        slidesWrapper.innerHTML = '';
+        slides = [];
+        currentIndex = 0;
+        allFiles.forEach((file) => {
+          const slide = document.createElement('div');
+          slide.className = 'slide hidden w-full h-full flex items-center justify-center flex-shrink-0';
+          if (file.content_type?.startsWith('image/') || file.type?.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = file.url || URL.createObjectURL(file.file);
+            img.className = 'object-contain max-w-full max-h-full';
+            slide.appendChild(img);
+          } else {
+            const p = document.createElement('p');
+            p.textContent = file.name || file.file.name;
+            slide.appendChild(p);
+          }
+          slidesWrapper.appendChild(slide);
+          slides.push(slide);
+        });
+        updateUI();
+        if(allFiles.length > 0) showSlide(0);
+      }
+
+      function updateUI() {
+        const hasFiles = allFiles.length > 0;
+        const hasMultipleFiles = allFiles.length > 1;
+        dropzone.classList.toggle('hidden', hasFiles);
+        slider.classList.toggle('hidden', !hasFiles);
+        uploadBtn.classList.toggle('hidden', hasFiles);
+        takePhotoBtn.classList.toggle('hidden', hasFiles);
+        clearAllBtn.classList.toggle('hidden', !hasFiles);
+        scanBtn.classList.toggle('hidden', !hasFiles);
+        prevBtn.classList.toggle('hidden', !hasMultipleFiles);
+        nextBtn.classList.toggle('hidden', !hasMultipleFiles);
+      }
+
+      function showSlide(idx) { slides.forEach((s, i) => s.classList.toggle('hidden', i !== idx)); }
+
+      allFiles = existingFiles.map(file => ({ ...file, isExisting: true }));
+      renderSlides();
+
+      imageInput.addEventListener('change', e => {
+        const justSelectedFiles = Array.from(e.target.files);
+        if (!justSelectedFiles.length) return;
+        const newFileWrappers = justSelectedFiles.map(file => ({ file, url: URL.createObjectURL(file), name: file.name, type: file.type, isExisting: false }));
+        allFiles = [...allFiles, ...newFileWrappers];
+        const dataTransfer = new DataTransfer();
+        const newFilesInMasterList = allFiles.filter(fw => !fw.isExisting).map(fw => fw.file);
+        newFilesInMasterList.forEach(file => dataTransfer.items.add(file));
+        imageInput.files = dataTransfer.files;
+        renderSlides();
+      });
+
+      prevBtn.addEventListener('click', () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; showSlide(currentIndex); });
+      nextBtn.addEventListener('click', () => { currentIndex = (currentIndex + 1) % slides.length; showSlide(currentIndex); });
+
+      clearAllBtn.addEventListener('click', () => {
+        Swal.fire({
+          title: 'Are you sure?',
+          text: "Do you want to remove all files?",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: 'Yes, remove them!'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            imageInput.value = '';
+            allFiles = [];
+            renderSlides();
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'clear_files';
+            hiddenInput.value = 'true';
+            form.appendChild(hiddenInput);
+          }
+        });
+      });
+
+      // RECIPIENT UI LOGIC
+      const recipientWrapper = document.getElementById('recipient-field');
+      const recipientDropdown = document.getElementById('recipient-dropdown');
+      const recipientTagsWrapper = document.getElementById('recipient-tags');
+      const recipientSelect = document.getElementById('id_recipients');
+      const recipientLabel = recipientWrapper.querySelector('label');
+      function addRecipientTag(id, name) {
+        const tag = document.createElement('span');
+        tag.className = 'tag bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-2';
+        tag.textContent = name;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.innerHTML = '×'; btn.className = 'font-bold text-blue-500 hover:text-blue-700';
+        btn.onclick = (e) => { e.stopPropagation(); recipientSelect.querySelector(`option[value="${id}"]`).selected = false; recipientTagsWrapper.removeChild(tag); refreshRecipientDropdown(); };
+        tag.appendChild(btn); recipientTagsWrapper.appendChild(tag);
+        recipientSelect.querySelector(`option[value="${id}"]`).selected = true;
+      }
+      function refreshRecipientDropdown() {
+        recipientDropdown.querySelectorAll('li').forEach(li => {
+          const opt = recipientSelect.querySelector(`option[value="${li.dataset.id}"]`);
+          li.classList.toggle('hidden', opt?.selected);
+        });
+      }
+      function toggleRecipientDropdown() { refreshRecipientDropdown(); recipientDropdown.classList.toggle('hidden'); }
+      recipientLabel.addEventListener('click', toggleRecipientDropdown);
+      recipientTagsWrapper.addEventListener('click', (e) => { if (e.target === recipientTagsWrapper) toggleRecipientDropdown(); });
+      document.addEventListener('click', (e) => { if (!recipientWrapper.contains(e.target)) recipientDropdown.classList.add('hidden'); });
+      recipientDropdown.querySelectorAll('li').forEach(item => {
+        item.addEventListener('click', () => { addRecipientTag(item.dataset.id, item.textContent.trim()); refreshRecipientDropdown(); recipientDropdown.classList.add('hidden'); });
+      });
+      initialRecipientIds.forEach(id => {
+        const li = recipientDropdown.querySelector(`li[data-id="${id}"]`);
+        if (li) addRecipientTag(id, li.textContent.trim());
+      });
+      refreshRecipientDropdown();
+
+      // SIGNATORY TAGS INPUT LOGIC
+      const signatoryContainer = document.getElementById('signatory-tags-container');
+      const signatoryInput = document.getElementById('signatory-input');
+      const hiddenSignatoriesInput = document.getElementById('id_signatories_str');
+      let signatoryTags = [];
+
+      function renderSignatoryTags() {
+        signatoryContainer.querySelectorAll('.tag').forEach(tag => tag.remove());
+        for (const tagName of signatoryTags) {
+          const tagElement = createTagElement(tagName);
+          signatoryContainer.insertBefore(tagElement, signatoryInput);
+        }
+        hiddenSignatoriesInput.value = signatoryTags.join(',');
+      }
+      
+      function createTagElement(name) {
+        const tag = document.createElement('span');
+        tag.className = 'tag bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full flex items-center gap-2';
+        tag.textContent = name;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.innerHTML = '×'; btn.className = 'font-bold text-purple-500 hover:text-purple-700';
+        btn.addEventListener('click', () => {
+          signatoryTags = signatoryTags.filter(t => t !== name);
+          renderSignatoryTags();
+        });
+        tag.appendChild(btn);
+        return tag;
+      }
+      
+      signatoryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const tagName = signatoryInput.value.trim();
+          if (tagName && !signatoryTags.includes(tagName)) {
+            signatoryTags.push(tagName);
+            renderSignatoryTags();
+          }
+          signatoryInput.value = '';
+        }
+      });
+      
+      signatoryContainer.addEventListener('click', () => { signatoryInput.focus(); });
+
+      // INITIALIZATION for Edit Page
+      if (initialSignatoriesStr) {
+          signatoryTags = initialSignatoriesStr.split(',').filter(name => name.trim() !== '');
+          renderSignatoryTags();
+      }
+
+      {% if messages %}
+          {% for message in messages %}
+              Swal.fire({
+                  icon: '{{ message.tags|default:"info" }}',
+                  title: '{{ message.tags|title|default:"Message" }}',
+                  text: '{{ message|escapejs }}',
+                  timer: 3000,
+                  showConfirmButton: false
+              });
+          {% endfor %}
+      {% endif %}
+    });
+  </script>
+</body>
+</html>

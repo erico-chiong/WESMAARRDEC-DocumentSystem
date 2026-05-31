@@ -1,0 +1,221 @@
+/* activities/static/activities/css/login.css */
+
+/* --- Import a professional-looking font --- */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #00660f; 
+    --primary-hover-color: #138d3e;
+    --secondary-color: #6c757d;
+    --background-color: #f0f2f5;
+    --form-bg-color: #ffffff;
+    --text-color: #212529;
+    --light-text-color: #6c757d;
+    --error-color: #dc3545;
+    --border-color: #dee2e6;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.login-container {
+    display: flex;
+    width: 100%;
+    max-width: 900px;
+    min-height: 600px;
+    background-color: var(--form-bg-color);
+    box-shadow: var(--shadow);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px;
+}
+
+/* --- Left Side (Branding) --- */
+.login-branding {
+    background: linear-gradient(135deg, var(--primary-color), #05459e);
+    color: white;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 45%;
+}
+
+.login-branding .logo {
+    max-width: 175px;
+    margin-bottom: 20px;
+    background: white;
+    border-radius: 50%;
+    padding: 10px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+
+}
+
+.login-branding h1 {
+    font-weight: 600;
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.login-branding p {
+    font-weight: 300;
+    font-size: 1rem;
+    max-width: 300px;
+}
+
+/* --- Right Side (Form) --- */
+.login-form-wrapper {
+    width: 55%;
+    padding: 60px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-form-wrapper h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.login-form-wrapper .subtitle {
+    color: var(--light-text-color);
+    margin-bottom: 30px;
+}
+
+/* --- Form Errors (e.g., "Invalid Credentials") --- */
+.non-field-errors {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    list-style: none; /* Remove bullet points from Django's errorlist */
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    color: var(--secondary-color);
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.form-group .form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+}
+
+/* --- Field specific errors --- */
+.field-error {
+    color: var(--error-color);
+    font-size: 0.8rem;
+    margin-top: 5px;
+    list-style: none; /* Remove bullet points */
+    padding-left: 0;
+}
+
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+}
+
+.form-options .forgot-password a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.form-options .forgot-password a:hover {
+    text-decoration: underline;
+}
+
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn-login:hover {
+    background-color: var(--primary-hover-color);
+}
+
+.btn-login:active {
+    transform: scale(0.98);
+}
+
+.signup-link {
+    text-align: center;
+    margin-top: 2rem;
+    color: var(--light-text-color);
+    font-size: 0.9rem;
+}
+
+.signup-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.signup-link a:hover {
+    text-decoration: underline;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 850px) {
+    .login-container {
+        flex-direction: column;
+        width: 90%;
+        max-width: 500px;
+        min-height: auto;
+    }
+
+    .login-branding {
+        width: auto;
+        padding: 40px 20px;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .login-form-wrapper {
+        width: auto;
+        padding: 40px 30px;
+    }
+}

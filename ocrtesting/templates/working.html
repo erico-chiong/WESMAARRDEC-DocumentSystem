@@ -1,0 +1,133 @@
+@csrf_exempt
+@require_POST
+def unified_scan_view(request):
+    """
+    Handles asynchronous file upload. It now processes both images and PDF files.
+    - For PDFs, it converts pages to images before sending to OCR.
+    - For 'moau' doc_type, it processes the first and last pages.
+    - For all other PDF doc_types, it processes only the first page.
+    """
+    try:
+        uploaded_file = request.FILES.get('file')
+        doc_type = request.POST.get('doc_type')
+
+        if not uploaded_file:
+            return JsonResponse({'error': 'No file was uploaded.'}, status=400)
+
+        # It's better to store your API key in settings.py
+        # settings.py: OCR_SPACE_API_KEY = 'K84532793088957'
+        # api_key = getattr(settings, 'OCR_SPACE_API_KEY', 'YOUR_DEFAULT_KEY')
+        api_key = 'K84532793088957'  # Using your key directly for now
+
+        all_extracted_text = []
+
+        # --- NEW: PDF Processing Logic ---
+        if uploaded_file.content_type == 'application/pdf':
+            pdf_bytes = uploaded_file.read()
+            
+            # Use pdf2image to convert the PDF from memory
+            pil_images = convert_from_bytes(pdf_bytes)
+
+            # Determine which pages to OCR
+            pages_to_ocr = []
+            if doc_type == 'moau' and len(pil_images) > 1:
+                # Add first and last page if it's a 'moau' and has more than one page
+                pages_to_ocr.append(pil_images[0])
+                pages_to_ocr.append(pil_images[-1])
+            elif pil_images:
+                # Otherwise, just use the first page
+                pages_to_ocr.append(pil_images[0])
+            
+            # Loop through the selected pages and perform OCR on each
+            for image in pages_to_ocr:
+                # Convert PIL Image to in-memory bytes to send to the API
+                with io.BytesIO() as output:
+                    image.save(output, format="JPEG")
+                    image_bytes = output.getvalue()
+
+                # Send the image bytes to the OCR API
+                response = requests.post(
+                    'https://api.ocr.space/parse/image',
+                    files={'file': ('image.jpg', image_bytes, 'image/jpeg')},
+                    data={
+                        'isOverlayRequired': False,
+                        'apikey': api_key,
+                        'language': 'eng',
+                        'scale': True,
+                        'OCREngine': 2,
+                    }
+                )
+                response.raise_for_status()
+                ocr_result = response.json()
+
+                if ocr_result.get('IsErroredOnProcessing'):
+                    error_message = ocr_result.get('ErrorMessage', ['Unknown OCR error.'])[0]
+                    return JsonResponse({'error': f'OCR Failed: {error_message}'}, status=400)
+
+                if ocr_result['ParsedResults']:
+                    all_extracted_text.append(ocr_result['ParsedResults'][0]['ParsedText'])
+
+            # Join the text from all processed pages
+            extracted_text = "\n\n--- Page Break ---\n\n".join(all_extracted_text)
+
+        # --- EXISTING: Image Processing Logic ---
+        else:
+            payload = {
+                'isOverlayRequired': False,
+                'apikey': api_key,
+                'language': 'eng',
+                'scale': True,
+                'OCREngine': 2
+            }
+            files = {'file': (uploaded_file.name, uploaded_file.read(), uploaded_file.content_type)}
+            
+            response = requests.post('https://api.ocr.space/parse/image', data=payload, files=files)
+            response.raise_for_status()
+            
+            ocr_result = response.json()
+
+            if ocr_result.get('IsErroredOnProcessing'):
+                error_message = ocr_result.get('ErrorMessage', ['Unknown OCR error.'])[0]
+                return JsonResponse({'error': f'OCR Failed: {error_message}'}, status=400)
+            
+            extracted_text = ocr_result['ParsedResults'][0]['ParsedText']
+
+        # 2. Route to the correct parser (This part remains the same)
+        if not extracted_text:
+             return JsonResponse({'error': 'OCR could not extract any text from the document.'}, status=400)
+
+        parsed_data = {}
+        if doc_type == 'special order':
+            parsed_data = parse_special_order_memorandum_travel(extracted_text)
+        # Add future document types here
+        # elif doc_type == 'moau':
+        #     parsed_data = parse_moa(extracted_text)
+        else:
+            return JsonResponse({'error': f'Unsupported document type for parsing: {doc_type}'}, status=400)
+
+        return JsonResponse(parsed_data)
+
+    except requests.exceptions.RequestException as e:
+        # Log error e
+        return JsonResponse({'error': f'Network error communicating with OCR service: {e}'}, status=500)
+    except Exception as e:
+        # Log error e for debugging
+        return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

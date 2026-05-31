@@ -1,0 +1,314 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Other Document</title>
+  <link href="https://unpkg.com/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-200">
+
+  <div id="loading-overlay" class="hidden z-50 fixed inset-0 flex justify-center items-center bg-black bg-opacity-50">
+    <div class="flex flex-col items-center">
+      <div class="border-4 border-gray-200 border-t-blue-500 rounded-full w-12 h-12 animate-spin"></div>
+      <p class="mt-2 text-white text-lg">Scanning, please wait…</p>
+    </div>
+  </div>
+
+  <div class="flex min-h-screen">
+    {% include "includes/sidebar.html" %}
+
+    <main class="bg-gray-50 md:shadow-lg mx-0 md:mx-5 md:my-5 p-2 sm:p-4 md:p-5 md:rounded-xl flex-1 transition-all duration-300">
+      <form id="document-form" method="post" enctype="multipart/form-data" class="flex md:flex-row flex-col md:space-x-4 h-full">
+        {% csrf_token %}
+        <input type="hidden" id="doc-type-input" value="other document">
+
+        <!-- LEFT PANEL (File Upload) -->
+        <div class="flex flex-col bg-white shadow p-2 md:p-4 rounded-lg w-full md:w-3/g-5">
+          <div id="upload-area" class="relative flex-1 mb-4">
+            <label for="image" id="dropzone" class="relative flex flex-col justify-center items-center bg-gray-50 hover:bg-gray-100 border-2 border-gray-300 border-dashed rounded-lg w-full h-72 md:h-full overflow-hidden cursor-pointer">
+              <div id="placeholder" class="z-10 flex flex-col items-center">
+                <svg class="mb-2 w-12 h-12 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                <p class="text-gray-600 text-xs md:text-sm"><span class="font-semibold">Click to upload</span> or drag & drop</p>
+              </div>
+            </label>
+            <div id="image-slider" class="hidden relative w-full h-full overflow-hidden">
+              <div id="slides-wrapper" class="w-full h-full"></div>
+              <button id="prevBtn" type="button" class="hidden top-1/2 left-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">‹</button>
+              <button id="nextBtn" type="button" class="hidden top-1/2 right-2 absolute bg-white bg-opacity-75 hover:bg-opacity-100 p-2 rounded-full -translate-y-1/2 transform">›</button>
+            </div>
+            <button type="button" id="clearAllBtn" class="hidden top-2 right-2 z-20 absolute bg-white shadow-md p-2 rounded-full text-red-600 text-2xl">×</button>
+            <input id="image" name="files" type="file" accept="image/*,application/pdf" multiple class="hidden"/>
+          </div>
+          <div class="flex justify-center space-x-2 mb-4">
+            <label for="image" id="uploadBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white cursor-pointer">Upload</label>
+            <label for="image" id="takePhotoBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white cursor-pointer">Take Photo</label>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL (Other Document Form Fields) -->
+        <div class="flex flex-col bg-white shadow mt-2 md:mt-0 p-4 rounded-lg w-full md:w-2/5">
+          <h2 class="mb-4 font-bold text-xl text-center">Save Other Document</h2>
+          {% if form.errors %}
+            <div class="bg-red-50 mb-4 p-3 border border-red-300 rounded text-red-700">
+              <strong>Please fix these:</strong>
+              <ul class="text-sm list-disc list-inside">{% for f in form %}{% for e in f.errors %}<li>{{ f.label }}: {{ e }}</li>{% endfor %}{% endfor %}{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+            </div>
+          {% endif %}
+          <div class="flex-1 space-y-4 overflow-auto">
+            <div><label for="id_doc_type" class="block font-medium text-gray-700 text-sm">Document Type</label>{{ form.doc_type }}</div>
+            <div><label for="id_subject" class="block font-medium text-gray-700 text-sm">Subject</label>{{ form.subject }}</div>
+            <div><label for="id_date" class="block font-medium text-gray-700 text-sm">Date</label>{{ form.date }}</div>
+            <div id="recipient-field" class="relative">
+              <label class="block font-medium text-gray-700 text-sm cursor-pointer">Recipients</label>
+              <div id="recipient-tags" class="flex flex-wrap items-center gap-2 mt-1 p-2 border border-gray-300 rounded min-h-[42px] cursor-pointer"></div>
+              <ul id="recipient-dropdown" class="hidden top-full left-0 z-20 absolute bg-white mt-1 border border-gray-300 rounded w-full max-h-40 overflow-auto">
+                {% for r in recipient_list %}<li data-id="{{ r.id }}" class="hover:bg-gray-100 px-3 py-2 cursor-pointer">{{ r.name }}</li>{% endfor %}
+              </ul>
+              <div class="hidden">{{ form.recipients }}</div>
+            </div>
+            
+            <!-- =================================================================== -->
+            <!-- --- NEW FIELD ADDED HERE --- -->
+            <!-- =================================================================== -->
+            <div>
+              <label for="id_received_by" class="block font-medium text-gray-700 text-sm">Received By</label>
+              {{ form.received_by }}
+            </div>
+            
+            <!-- Remarks field was already here and is preserved -->
+            <div><label for="id_remarks" class="block font-medium text-gray-700 text-sm">Remarks (Optional)</label>{{ form.remarks }}</div>
+
+          </div>
+          <div class="mt-6"><button type="submit" class="bg-green-600 hover:bg-green-700 py-2 rounded w-full text-white">Save Document</button></div>
+        </div>
+      </form>
+    </main>
+  </div>
+
+<script>
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ELEMENT REFS
+  const uploadArea = document.getElementById('upload-area');
+  const dropzone = document.getElementById('dropzone');
+  const imageInput = document.getElementById('image');
+  const slider = document.getElementById('image-slider');
+  const slidesWrapper = document.getElementById('slides-wrapper');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const clearAllBtn = document.getElementById('clearAllBtn');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const takePhotoBtn = document.getElementById('takePhotoBtn');
+
+  let slides = [], currentIndex = 0;
+  let allFiles = []; // Persistent storage for all files
+
+  function showSlide(idx) {
+    slides.forEach((s, i) => s.classList.toggle('hidden', i !== idx));
+  }
+
+  function updateUI() {
+    uploadBtn.classList.toggle('hidden', allFiles.length > 0);
+    takePhotoBtn.classList.toggle('hidden', allFiles.length > 0);
+    prevBtn.classList.toggle('hidden', allFiles.length <= 1);
+    nextBtn.classList.toggle('hidden', allFiles.length <= 1);
+  }
+
+  function renderSlider() {
+    slidesWrapper.innerHTML = '';
+    slides = [];
+    currentIndex = 0;
+
+    if (allFiles.length === 0) {
+      dropzone.classList.remove('hidden');
+      slider.classList.add('hidden');
+      clearAllBtn.classList.add('hidden');
+      updateUI();
+      return;
+    }
+
+    dropzone.classList.add('hidden');
+    slider.classList.remove('hidden');
+    clearAllBtn.classList.remove('hidden');
+
+    allFiles.forEach(file => {
+      const slide = document.createElement('div');
+      slide.className = 'slide hidden w-full h-full flex items-center justify-center';
+      if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'object-contain max-w-full max-h-full';
+        slide.appendChild(img);
+      } else {
+        const p = document.createElement('p');
+        p.textContent = file.name;
+        p.className = 'text-sm text-gray-700';
+        slide.appendChild(p);
+      }
+      slidesWrapper.appendChild(slide);
+      slides.push(slide);
+    });
+    
+    showSlide(0);
+    updateUI();
+  }
+
+  const documentForm = document.getElementById('document-form');
+  documentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (allFiles.length === 0) {
+      alert('Please upload at least one file.');
+      return;
+    }
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    loadingOverlay.classList.remove('hidden');
+    const formData = new FormData(documentForm);
+    
+    // Ensure all files are in the FormData
+    formData.delete('files'); // Clear any existing
+    allFiles.forEach(file => formData.append('files', file));
+
+    try {
+      const response = await fetch(documentForm.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      });
+
+      if (response.redirected) {
+        window.location.href = response.url;
+      } else {
+        // If not redirected, it might be a validation error (HTML) or a JSON error
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          if (data.error) alert(data.error);
+          loadingOverlay.classList.add('hidden');
+        } else {
+          // Likely HTML with validation errors - replace the whole page to show them
+          const html = await response.text();
+          document.open();
+          document.write(html);
+          document.close();
+        }
+      }
+    } catch (error) {
+      console.error('Submission failed:', error);
+      alert('An error occurred while saving the document.');
+      loadingOverlay.classList.add('hidden');
+    }
+  });
+
+  let isUpdatingFiles = false;
+  function updateInputFiles() {
+    isUpdatingFiles = true;
+    const dt = new DataTransfer();
+    allFiles.forEach(file => dt.items.add(file));
+    imageInput.files = dt.files;
+    setTimeout(() => { isUpdatingFiles = false; }, 0);
+  }
+
+  [dropzone, uploadBtn, takePhotoBtn].forEach(el => {
+    if (el) el.addEventListener('click', () => { /* No longer clearing allFiles here */ });
+  });
+
+  // DRAG AND DROP HANDLING
+  ['dragover', 'dragenter'].forEach(evt => {
+    uploadArea.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  ['dragleave', 'dragend', 'drop'].forEach(evt => {
+    uploadArea.addEventListener(evt, e => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  uploadArea.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length) {
+      allFiles = [...allFiles, ...files];
+      updateInputFiles();
+      renderSlider();
+    }
+  });
+
+  imageInput.addEventListener('change', e => {
+    if (isUpdatingFiles) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    allFiles = [...allFiles, ...files];
+    updateInputFiles();
+    renderSlider();
+  });
+
+  prevBtn.addEventListener('click', () => { currentIndex = (currentIndex - 1 + slides.length) % slides.length; showSlide(currentIndex); });
+  nextBtn.addEventListener('click', () => { currentIndex = (currentIndex + 1) % slides.length; showSlide(currentIndex); });
+  clearAllBtn.addEventListener('click', () => {
+    allFiles = [];
+    imageInput.value = '';
+    renderSlider();
+  });
+
+  const wrapper = document.getElementById('recipient-field');
+  const dropdown = document.getElementById('recipient-dropdown');
+  const tagsWrapper = document.getElementById('recipient-tags');
+  const select = document.getElementById('id_recipients');
+  const recipientLabel = wrapper.querySelector('label');
+
+  function toggleDropdown() {
+    refreshDropdown();
+    dropdown.classList.toggle('hidden');
+  }
+  function refreshDropdown() {
+    dropdown.querySelectorAll('li').forEach(li => {
+      const opt = select.querySelector(`option[value="${li.dataset.id}"]`);
+      li.classList.toggle('hidden', opt && opt.selected);
+    });
+  }
+  recipientLabel.addEventListener('click', toggleDropdown);
+  tagsWrapper.addEventListener('click', (e) => { if (e.target === tagsWrapper) { toggleDropdown(); } });
+  document.addEventListener('click', e => { if (!wrapper.contains(e.target)) { dropdown.classList.add('hidden'); } });
+  dropdown.querySelectorAll('li').forEach(item => {
+    item.addEventListener('click', () => {
+      const id = item.dataset.id;
+      const name = item.textContent.trim();
+      const tag = document.createElement('span');
+      tag.className = 'bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-2';
+      tag.textContent = name;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.innerHTML = '×';
+      btn.className = 'font-bold text-blue-500 hover:text-blue-700';
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        select.querySelector(`option[value="${id}"]`).selected = false;
+        tagsWrapper.removeChild(tag);
+        refreshDropdown();
+      });
+      tag.appendChild(btn);
+      tagsWrapper.appendChild(tag);
+      select.querySelector(`option[value="${id}"]`).selected = true;
+      dropdown.classList.add('hidden');
+      item.classList.add('hidden');
+    });
+  });
+  
+  updateUI();
+});
+</script>
+
+</body>
+</html>

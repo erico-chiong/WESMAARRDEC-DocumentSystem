@@ -1,0 +1,11 @@
+django
+google-api-python-client
+google-auth
+openpyxl
+pdf2image
+Pillow
+PyPDF2
+reportlab
+requests
+# python-poppler  # Requires C++ compiler - install Microsoft C++ Build Tools to enable
+django-allauth

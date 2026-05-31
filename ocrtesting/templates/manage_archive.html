@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Document Archive</title>
+  {% load static %}
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-gray-100">
+<div class="flex min-h-screen">
+
+  <!-- Sidebar Included -->
+  {% include "includes/sidebar.html" %}
+
+  <!-- Main Content Area -->
+  <main class="flex-1 p-4 md:p-6">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full">
+
+      <!-- Header and Tabs -->
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 pb-4 border-b border-gray-200">
+        <h1 class="text-2xl font-bold text-gray-800">{{ page_title }}</h1>
+        <div class="mt-4 sm:mt-0">
+          <div class="flex border border-gray-300 rounded-md">
+            <a href="{% url 'ocrtesting:manage_archive' %}?mode=live" class="px-4 py-2 text-sm font-medium {% if current_mode == 'live' %}bg-blue-600 text-white rounded-l-md{% else %}bg-white text-gray-700 hover:bg-gray-50 rounded-l-md{% endif %}">
+              Archive Documents
+            </a>
+            <a href="{% url 'ocrtesting:manage_archive' %}?mode=archived" class="px-4 py-2 text-sm font-medium {% if current_mode == 'archived' %}bg-blue-600 text-white rounded-r-md{% else %}bg-white text-gray-700 hover:bg-gray-50 rounded-r-md{% endif %}">
+              Manage Archive
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Display Django Messages -->
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Filter Form (Now dynamic) -->
+      <form id="filter-form" method="get" class="mb-6">
+        <input type="hidden" name="mode" value="{{ current_mode }}">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          
+          <div>
+            <label for="fiscal_year" class="block text-sm font-medium text-gray-700">Fiscal Year</label>
+            <select name="fiscal_year" id="fiscal_year" class="filter-input mt-1 block w-full border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">All Years</option>
+              {% for year in fiscal_years_for_dropdown %}
+                <option value="{{ year }}" {% if filter_values.fiscal_year|add:0 == year %}selected{% endif %}>{{ year }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="month" class="block text-sm font-medium text-gray-700">Month</label>
+            <select name="month" id="month" class="filter-input mt-1 block w-full border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Months</option>
+                {% for month_num, month_name in month_list %}
+                    <option value="{{ month_num }}" {% if filter_values.month|add:0 == month_num %}selected{% endif %}>{{ month_name }}</option>
+                {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label for="doc_type" class="block text-sm font-medium text-gray-700">Document Type</label>
+            <select name="doc_type" id="doc_type" class="filter-input mt-1 block w-full border-gray-300 rounded-md shadow-sm px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Types</option>
+                <option value="special_order" {% if filter_values.doc_type == 'special_order' %}selected{% endif %}>Special Order</option>
+                <option value="travel_order" {% if filter_values.doc_type == 'travel_order' %}selected{% endif %}>Travel Order</option>
+                <option value="memorandum" {% if filter_values.doc_type == 'memorandum' %}selected{% endif %}>Memorandum</option>
+                <option value="communication_letter" {% if filter_values.doc_type == 'communication_letter' %}selected{% endif %}>Communication Letter</option>
+                <option value="moau" {% if filter_values.doc_type == 'moau' %}selected{% endif %}>MOAU</option>
+                <option value="other_document" {% if filter_values.doc_type == 'other_document' %}selected{% endif %}>Other Document</option>
+            </select>
+          </div>
+
+          <div>
+            <a href="{% url 'ocrtesting:manage_archive' %}?mode={{ current_mode }}" class="w-full text-center bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md hover:bg-gray-400">Reset</a>
+          </div>
+
+        </div>
+      </form>
+      
+      <!-- Main Form for Actions (Archive/Restore) -->
+      <form id="action-form" method="post">
+        {% csrf_token %}
+        <div class="overflow-x-auto border rounded-lg">
+          <table class="min-w-full bg-white divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="p-4 w-16">
+                  <input type="checkbox" id="select-all" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                </th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject / ID</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              {% for doc in documents %}
+                <tr>
+                  <td class="p-4 w-16">
+                    <!-- THIS IS THE CORRECTED LINE -->
+                    <input type="checkbox" name="doc_{{ forloop.counter }}" value="{{ doc.doc_type_slug }}_{{ doc.pk }}" class="doc-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                  </td>
+                  <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                    <div class="break-words">{{ doc.subject|default:"(No Subject)"|truncatechars:70 }}</div>
+                    {% if doc.document_id %}
+                      <div class="text-xs text-gray-500">ID: {{ doc.document_id }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ doc.doc_type_display }}</td>
+                  <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{{ doc.date|date:"M. d, Y" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center py-10 px-6 text-gray-500">
+                    No documents found matching your criteria.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="py-4 flex items-center justify-center">
+          {% include 'activities/partials/pagination.html' with page_obj=page_obj page_range=page_range querystring=querystring %}
+        </div>
+        {% endif %}
+
+        <!-- Action Button Footer -->
+        {% if documents %}
+          <div class="mt-6 flex justify-end">
+            {% if current_mode == 'live' %}
+              <button type="submit" formaction="{% url 'ocrtesting:archive_documents' %}" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-blue-700">
+                Archive Selected
+              </button>
+            {% else %}
+              <button type="submit" formaction="{% url 'ocrtesting:restore_documents' %}" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-md hover:bg-green-700">
+                Restore Selected
+              </button>
+            {% endif %}
+          </div>
+        {% endif %}
+      </form>
+
+    </div>
+  </main>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Select All Checkbox Logic ---
+    const selectAllCheckbox = document.getElementById('select-all');
+    const docCheckboxes = document.querySelectorAll('.doc-checkbox');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            docCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+        });
+    }
+
+    docCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (!this.checked) {
+                selectAllCheckbox.checked = false;
+            } else if (Array.from(docCheckboxes).every(cb => cb.checked)) {
+                selectAllCheckbox.checked = true;
+            }
+        });
+    });
+
+    // --- DYNAMIC FILTER SUBMISSION ---
+    const filterForm = document.getElementById('filter-form');
+    document.querySelectorAll('.filter-input').forEach(input => {
+        input.addEventListener('change', () => {
+            filterForm.submit();
+        });
+    });
+});
+</script>
+</body>
+</html>
