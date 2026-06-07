@@ -2316,28 +2316,35 @@ def view_documents(request):
 
 def export_documents_pdf(request):
     documents, page_title = _get_filtered_documents(request)
-
-    # Load your template (portrait)
-    template_path = "images/logo/template.pdf"  # <-- update path
-    template_reader = PdfReader(template_path)
-    template_page = template_reader.pages[0]
-
-    # Create overlay
+    
+    output = PdfWriter()
+    styles = getSampleStyleSheet()
+    
+    PAGE_WIDTH, PAGE_HEIGHT = letter
+    MARGIN = 0.5 * inch
+    
+    # Create title/summary page
     packet = io.BytesIO()
     overlay = canvas.Canvas(packet, pagesize=letter)
-
-    PAGE_WIDTH, PAGE_HEIGHT = letter
-    MARGIN = 0.5 * inch         # 2.54 cm margins
-    HEADER_HEIGHT = 0.7 * inch  # ~2.54 cm header space
-
-    # Add title just below header
+    
+    # Load template for title page
+    template_path = "images/logo/template.pdf"
+    try:
+        template_reader = PdfReader(template_path)
+        template_page = template_reader.pages[0]
+    except:
+        template_page = None
+    
+    # Add title
     overlay.setFont("Helvetica-Bold", 16)
-    overlay.drawCentredString(PAGE_WIDTH / 2,
-                              PAGE_HEIGHT - HEADER_HEIGHT + 0.5 * inch,
-                              page_title)
-
-    # Build table data
-    styles = getSampleStyleSheet()
+    overlay.drawCentredString(PAGE_WIDTH / 2, PAGE_HEIGHT - 1 * inch, page_title)
+    
+    # Add report summary
+    overlay.setFont("Helvetica", 10)
+    overlay.drawString(MARGIN, PAGE_HEIGHT - 1.5 * inch, f"Report Date: {date.today().strftime('%B %d, %Y')}")
+    overlay.drawString(MARGIN, PAGE_HEIGHT - 1.8 * inch, f"Total Documents: {len(documents)}")
+    
+    # Build summary table
     data = [["Type", "Subject", "Doc ID", "Recipients", "Doc Date"]]
     for d in documents:
         doc_id_text = d.document_id if hasattr(d, 'document_id') and d.document_id else 'N/A'
@@ -2348,54 +2355,155 @@ def export_documents_pdf(request):
             Paragraph(d.recipient_list_display, styles['Normal']),
             d.date.strftime('%b. %d, %Y')
         ])
-
-    # Column widths with wrapping support
+    
     usable_width = PAGE_WIDTH - (2 * MARGIN)
     col_widths = [
-        1.7 * inch,  # Type
-        2.0 * inch,  # Subject
+        1.5 * inch,  # Type
+        1.8 * inch,  # Subject
         0.6 * inch,  # Doc ID
-        2.2 * inch,  # Recipients
-        1.0 * inch   # Date
+        2.0 * inch,  # Recipients
+        0.9 * inch   # Date
     ]
     total_width = sum(col_widths)
     if total_width > usable_width:
         scale = usable_width / total_width
         col_widths = [w * scale for w in col_widths]
-
+    
     table = Table(data, colWidths=col_widths)
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4A5568')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
         ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#F7FAFC')),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
     ]))
-
-    # Calculate Y so table starts just below header
+    
     table_width, table_height = table.wrap(usable_width, 0)
-    y_position = PAGE_HEIGHT - HEADER_HEIGHT - 10  # 10px gap below header
+    y_position = PAGE_HEIGHT - 2.3 * inch
     table.drawOn(overlay, MARGIN, y_position - table_height)
-
+    
     overlay.save()
     packet.seek(0)
-
-    # Merge overlay with template
+    
+    # Add title page to output
     overlay_reader = PdfReader(packet)
-    template_page.merge_page(overlay_reader.pages[0])
-
-    output = PdfWriter()
-    output.add_page(template_page)
-
+    if template_page:
+        template_page.merge_page(overlay_reader.pages[0])
+        output.add_page(template_page)
+    else:
+        output.add_page(overlay_reader.pages[0])
+    
+    # Add detailed page for each document
+    for idx, doc in enumerate(documents, 1):
+        packet = io.BytesIO()
+        doc_canvas = canvas.Canvas(packet, pagesize=letter)
+        
+        # Page header
+        doc_canvas.setFont("Helvetica-Bold", 12)
+        doc_canvas.drawString(MARGIN, PAGE_HEIGHT - 0.5 * inch, f"Document {idx} of {len(documents)}")
+        
+        # Document details
+        y = PAGE_HEIGHT - 1 * inch
+        doc_canvas.setFont("Helvetica-Bold", 10)
+        doc_canvas.drawString(MARGIN, y, "DOCUMENT DETAILS")
+        
+        y -= 0.25 * inch
+        doc_canvas.setFont("Helvetica", 9)
+        
+        detail_data = []
+        detail_data.append(["Type:", doc.doc_type_display])
+        detail_data.append(["Document ID:", doc.document_id if hasattr(doc, 'document_id') and doc.document_id else 'N/A'])
+        detail_data.append(["Subject:", doc.subject or '(No Subject)'])
+        detail_data.append(["Date:", doc.date.strftime('%B %d, %Y')])
+        
+        # Add category if available
+        if hasattr(doc, 'category'):
+            detail_data.append(["Category:", doc.category.title()])
+        
+        # Add from/for fields if available
+        if hasattr(doc, 'from_field') and doc.from_field:
+            detail_data.append(["From:", doc.from_field])
+        if hasattr(doc, 'for_field') and doc.for_field:
+            detail_data.append(["For:", doc.for_field])
+        if hasattr(doc, 'thru') and doc.thru:
+            detail_data.append(["Thru:", doc.thru])
+        if hasattr(doc, 'to_or_thru') and doc.to_or_thru:
+            detail_data.append(["To/Thru:", doc.to_or_thru])
+        
+        # Add MOAU specific fields
+        if hasattr(doc, 'first_party_agency') and doc.first_party_agency:
+            detail_data.append(["First Party:", f"{doc.first_party_agency} - {doc.first_party_representative or 'N/A'}"])
+        if hasattr(doc, 'second_party_agency') and doc.second_party_agency:
+            detail_data.append(["Second Party:", f"{doc.second_party_agency} - {doc.second_party_representative or 'N/A'}"])
+        
+        # Add OtherDocument type if available
+        if hasattr(doc, 'doc_type') and isinstance(doc, OtherDocument):
+            detail_data.append(["Document Type:", doc.doc_type])
+        
+        detail_data.append(["Recipients:", doc.recipient_list_display or '(None)'])
+        detail_data.append(["Received By:", getattr(doc, 'received_by', '') or '(Not specified)'])
+        
+        if hasattr(doc, 'approved_date') and doc.approved_date:
+            detail_data.append(["Approved Date:", doc.approved_date.strftime('%B %d, %Y')])
+        
+        # Create detail table
+        detail_table = Table(detail_data, colWidths=[1.5 * inch, 4.5 * inch])
+        detail_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#F9FAFB')]),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        detail_table_width, detail_table_height = detail_table.wrap(usable_width, 0)
+        detail_table.drawOn(doc_canvas, MARGIN, y - detail_table_height - 0.3 * inch)
+        
+        # Add remarks if available
+        remarks_y = y - detail_table_height - 0.8 * inch
+        if hasattr(doc, 'remarks') and doc.remarks:
+            doc_canvas.setFont("Helvetica-Bold", 10)
+            doc_canvas.drawString(MARGIN, remarks_y, "REMARKS")
+            doc_canvas.setFont("Helvetica", 9)
+            
+            # Word wrap remarks
+            remarks_text = doc.remarks
+            remark_lines = []
+            max_chars = 90
+            for i in range(0, len(remarks_text), max_chars):
+                remark_lines.append(remarks_text[i:i + max_chars])
+            
+            remarks_y -= 0.25 * inch
+            for line in remark_lines[:5]:  # Limit to 5 lines
+                doc_canvas.drawString(MARGIN + 0.2 * inch, remarks_y, line)
+                remarks_y -= 0.2 * inch
+        
+        # Add page number
+        doc_canvas.setFont("Helvetica", 8)
+        doc_canvas.drawRightString(PAGE_WIDTH - MARGIN, MARGIN * 0.5, f"Page {idx + 1} of {len(documents) + 1}")
+        
+        doc_canvas.save()
+        packet.seek(0)
+        
+        doc_reader = PdfReader(packet)
+        output.add_page(doc_reader.pages[0])
+    
     final_pdf = io.BytesIO()
     output.write(final_pdf)
     final_pdf.seek(0)
-
+    
     filename = f"{slugify(page_title)}.pdf"
     response = HttpResponse(final_pdf, content_type="application/pdf")
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
