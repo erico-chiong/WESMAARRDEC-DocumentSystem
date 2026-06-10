@@ -160,11 +160,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     const filterForm = document.getElementById('filter-form');
 
-    // DYNAMIC FILTER SUBMISSION
+    // 1. DYNAMIC FILTER SUBMISSION FOR SELECT DROPDOWNS
     document.querySelectorAll('.filter-input').forEach(input => {
         input.addEventListener('change', () => filterForm.submit());
     });
 
+    // 2. SEARCH INPUT (SUBMIT ON ENTER)
     const searchInput = document.getElementById('search');
     if (searchInput) {
         searchInput.addEventListener('keydown', function(event) {
@@ -175,13 +176,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // DATE RANGE PICKER INITIALIZATION
+    // 3. DATE RANGE PICKER INITIALIZATION & AUTO-SUBMIT
     const startDateInput = document.getElementById('start_date');
     const endDateInput = document.getElementById('end_date');
     const dateRangePicker = document.getElementById('dateRangePicker');
 
     if (dateRangePicker) {
-        // Set default date range to start of year to today if not already set
         const today = new Date();
         const startOfYear = new Date(today.getFullYear(), 0, 1);
         
@@ -192,33 +192,42 @@ document.addEventListener('DOMContentLoaded', function () {
             return `${year}-${month}-${day}`;
         };
         
-        // If no dates are set, use defaults
+        // Track if we need to auto-submit the page because defaults were missing
+        let coordinatesUpdated = false;
+
         if (!startDateInput.value) {
             startDateInput.value = formatDate(startOfYear);
+            coordinatesUpdated = true;
         }
         if (!endDateInput.value) {
             endDateInput.value = formatDate(today);
+            coordinatesUpdated = true;
         }
         
         flatpickr(dateRangePicker, {
             mode: "range",
-            dateFormat: "Y-m-d", // The format sent to the server
+            dateFormat: "Y-m-d",
             altInput: true,
-            altFormat: "M j, Y", // The format the user sees
-            defaultDate: [new Date(startDateInput.value), new Date(endDateInput.value)], // Set initial values from hidden inputs
+            altFormat: "M j, Y",
+            defaultDate: [new Date(startDateInput.value), new Date(endDateInput.value)],
             
-            onClose: function(selectedDates) {
+            // Fires immediately when a range is completed, preventing the need to click away
+            onChange: function(selectedDates) {
                 if (selectedDates.length === 2) {
                     startDateInput.value = formatDate(selectedDates[0]);
                     endDateInput.value = formatDate(selectedDates[1]);
-                    
                     filterForm.submit();
                 }
             }
         });
+
+        // If the page opened with blank dates, trigger an automatic filter submission to match defaults
+        if (coordinatesUpdated && !window.location.search) {
+            filterForm.submit();
+        }
     }
 
-    // REPORT DROPDOWN MENU
+    // 4. REPORT DROPDOWN MENU
     const reportContainer = document.getElementById('report-dropdown-container');
     const reportButton = document.getElementById('report-menu-button');
     const reportMenu = document.getElementById('report-menu');
@@ -235,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    // DELETE CONFIRMATION
+    // 5. DELETE CONFIRMATION
     document.querySelectorAll('.delete-doc-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
@@ -260,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // GLOBAL SUCCESS MESSAGES
+    // 6. GLOBAL SUCCESS MESSAGES
     {% if messages %}
         {% for message in messages %}
             Swal.fire({
